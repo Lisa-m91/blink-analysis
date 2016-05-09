@@ -10,7 +10,7 @@ from numpy import (std, mean, max as np_max, min as np_min, sum as np_sum,
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
-    scale = scale * expansion
+    scale = round(int(scale) * expansion)
     roi = (slice(None),) + tuple(slice(p - scale, p + scale) for p in pos)
     return image[roi]
 
