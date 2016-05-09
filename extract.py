@@ -53,6 +53,12 @@ def categorize(iterable, on_threshold, off_threshold):
             on = True
         yield on
 
+def blinkTimes(iterable):
+    count = 0
+    for i in iterable:
+        if not i and count > 0:
+            yield count
+        count = (count + 1) if i else 0
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -143,5 +149,25 @@ if __name__ == '__main__':
                   cmap=get_cmap('gray'), interpolation="nearest")
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
+
+    fig = plt.figure()
+
+    on_times = []
+    blink_times = []
+    for roi in rois:
+        trace = np_fromiter(map(np_max, rollingMedian(roi, 3)),
+                            dtype='float', count=len(image) - 2)
+        thresholds = getThresholds(trace, args.on_threshold)
+        on = np_fromiter(map(int, categorize(trace, *thresholds)),
+                         dtype='uint8', count=len(trace))
+        on_times.append(np_sum(on))
+        blink_times.extend(blinkTimes(on))
+
+    ax = fig.add_subplot(2, 1, 1)
+    ax.set_title("On times")
+    ax.hist(on_times, 30)
+    ax = fig.add_subplot(2, 1, 2)
+    ax.set_title("Blink times")
+    ax.hist(blink_times, 30)
 
     plt.show()
