@@ -5,7 +5,8 @@ from tifffile import imread
 
 from blob import findBlobs
 
-from numpy import std, mean, max as np_max, min as np_min, median, array
+from numpy import (std, mean, max as np_max, min as np_min, sum as np_sum,
+                   median, array, fromiter as np_fromiter)
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
@@ -28,11 +29,20 @@ def tupleReduce(iterable, *functions):
         return tuple(f(a, v) for f, a, v in zip(functions, acc, val))
     return reduce(reduction, iterable)
 
-def getThresholds(image, thresholds):
-    medians = rollingMedian(image, 3)
-    image_range = tupleReduce(map(lambda x: (np_max(x), np_max(x)), medians), min, max)
-    return (image_range[0] + (image_range[1] - image_range[0]) * thresholds[0],
-            image_range[0] + (image_range[1] - image_range[0]) * thresholds[1])
+def getThresholds(data, thresholds):
+    from itertools import tee
+
+    data_range = tupleReduce(zip(*tee(data, 2)), min, max)
+    return (data_range[0] + (data_range[1] - data_range[0]) * thresholds[0],
+            data_range[0] + (data_range[1] - data_range[0]) * thresholds[1])
+
+def makeSegments(y, x=None):
+    from numpy import arange, concatenate
+
+    if x is None:
+        x = arange(len(y))
+    points = array([x, y]).T.reshape(-1, 1, 2)
+    return concatenate([points[:-1], points[1:]], axis=1)
 
 def categorize(iterable, on_threshold, off_threshold):
     on = False
@@ -49,6 +59,9 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
     from matplotlib.cm import get_cmap
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+    from matplotlib.collections import LineCollection
+
     from numpy import percentile, concatenate, asarray
     from random import sample
 
@@ -101,16 +114,24 @@ if __name__ == '__main__':
     vmax = max(map(np_max, samples))
     plt_indices = range(1, len(samples) * 2, 2)
     for i, roi in zip(plt_indices, samples):
+        trace = np_fromiter(map(np_max, rollingMedian(roi, 3)),
+                            dtype='float', count=len(image) - 2)
+        thresholds = getThresholds(trace, args.on_threshold)
+        on = np_fromiter(map(int, categorize(trace, *thresholds)),
+                         dtype='uint8', count=len(trace))
 
-        trace = np_max(roi, axis=tuple(range(1, roi.ndim)))
-        thresholds = getThresholds(roi, args.on_threshold)
-        colors = array([0.0, 1.0])
-        colors = [colors[i] for i in map(int, categorize(trace, *thresholds))]
+        cmap = ListedColormap(['r', 'b'])
+        norm = BoundaryNorm([-float('inf'), 0.5, float('inf')], cmap.N)
 
-        # http://matplotlib.org/examples/pylab_examples/multicolored_line.html
-        ax.scatter(trace)
+        lc = LineCollection(makeSegments(trace), cmap=cmap, norm=norm)
+        lc.set_array(on)
+
+        ax = fig.add_subplot(ntraces*2, 1, i)
         ax.set_ylabel("max. intensity")
         ax.set_xlabel("frame")
+        ax.add_collection(lc)
+        ax.set_xlim(0, len(trace))
+        ax.set_ylim(vmin, vmax)
         ax.axhline(y=thresholds[0], color='green')
         ax.axhline(y=thresholds[1], color='red')
 
