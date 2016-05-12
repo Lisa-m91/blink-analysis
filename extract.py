@@ -6,7 +6,7 @@ from tifffile import imread
 from blob import findBlobs
 
 from numpy import (std, mean, max as np_max, min as np_min, sum as np_sum,
-                   median, array, fromiter as np_fromiter)
+                   median, array, empty, fromiter as np_fromiter)
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
@@ -90,7 +90,13 @@ if __name__ == '__main__':
                         help="The fraction of the maximum value a spot has to rise above to be 'on'")
 
     args = parser.parse_args()
-    image = imread(args.image) / imread(args.background)
+    raw = imread(args.image, memmap=True)
+    background = imread(args.background)
+
+    image = empty((len(raw) - 2,) + raw.shape[1:], dtype='float32')
+    for i, frame in enumerate(rollingMedian(raw, 3)):
+        image[i] = frame / background
+    del raw
 
     proj = np_max(image, axis=0)
     peaks = findBlobs(proj, scales=range(*args.spot_size),
@@ -119,8 +125,7 @@ if __name__ == '__main__':
     vmax = max(map(np_max, samples))
     plt_indices = range(1, len(samples) * 2, 2)
     for i, roi in zip(plt_indices, samples):
-        trace = np_fromiter(map(np_max, rollingMedian(roi, 3)),
-                            dtype='float', count=len(image) - 2)
+        trace = np_max(roi, axis=(1, 2))
         thresholds = getThresholds(trace, args.on_threshold)
         on = np_fromiter(map(int, categorize(trace, *thresholds)),
                          dtype='uint8', count=len(trace))
@@ -141,7 +146,7 @@ if __name__ == '__main__':
         ax.axhline(y=thresholds[1], color='red')
 
         ax = fig.add_subplot(ntraces*2, 1, i+1)
-        rowsize = 100
+        rowsize = 409 # Factors 8998
         show = concatenate([concatenate(roi[i:i+rowsize], axis=-1)
                             for i in range(0, len(roi), rowsize)], axis=-2)
         ax.imshow(show, vmax=vmax, vmin=vmin,
@@ -149,19 +154,17 @@ if __name__ == '__main__':
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
-    fig = plt.figure()
-
     on_times = []
     blink_times = []
     for roi in rois:
-        trace = np_fromiter(map(np_max, rollingMedian(roi, 3)),
-                            dtype='float', count=len(image) - 2)
+        trace = np_max(roi, axis=(1, 2))
         thresholds = getThresholds(trace, args.on_threshold)
         on = np_fromiter(map(int, categorize(trace, *thresholds)),
                          dtype='uint8', count=len(trace))
         on_times.append(np_sum(on))
         blink_times.extend(blinkTimes(on))
 
+    fig = plt.figure()
     ax = fig.add_subplot(2, 1, 1)
     ax.set_title("On times")
     ax.hist(on_times, 30)
