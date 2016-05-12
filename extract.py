@@ -73,6 +73,7 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(description="Extract points from a video.")
     parser.add_argument("image", type=str, help="The video to process.")
+    parser.add_argument("--background", type=str, help="A background image to correct for.")
     parser.add_argument("--spot-size", nargs=2, type=int, default=(2, 5),
                         help="The range of spot sizes to search for.")
     parser.add_argument("--max-overlap", type=float, default=0.05,
@@ -89,11 +90,9 @@ if __name__ == '__main__':
                         help="The fraction of the maximum value a spot has to rise above to be 'on'")
 
     args = parser.parse_args()
-    image = imread(args.image).astype('float32')
+    image = imread(args.image) / imread(args.background)
 
-    #thresholds = getThresholds(image, args.on_threshold)
-
-    proj = np_max(image, axis=0) / mean(image, axis=0)
+    proj = np_max(image, axis=0)
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.blob_threshold, max_overlap=args.max_overlap)
 
@@ -111,7 +110,7 @@ if __name__ == '__main__':
     ax.set_yticks([])
     ax.set_xlim(0, proj.shape[0])
     ax.set_xticks([])
-    ax.set_title("max/mean intensity")
+    ax.set_title("max intensity")
 
     fig = plt.figure()
     ntraces = 5
