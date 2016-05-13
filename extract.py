@@ -136,7 +136,7 @@ if __name__ == '__main__':
         lc = LineCollection(makeSegments(trace), cmap=cmap, norm=norm)
         lc.set_array(on)
 
-        ax = fig.add_subplot(ntraces*2, 1, i)
+        ax = fig.add_subplot(plt_indices.stop, 1, i)
         ax.set_ylabel("max. intensity")
         ax.set_xlabel("frame")
         ax.add_collection(lc)
@@ -145,7 +145,7 @@ if __name__ == '__main__':
         ax.axhline(y=thresholds[0], color='green')
         ax.axhline(y=thresholds[1], color='red')
 
-        ax = fig.add_subplot(ntraces*2, 1, i+1)
+        ax = fig.add_subplot(plt_indices.stop, 1, i+1)
         rowsize = 409 # Factors 8998
         show = concatenate([concatenate(roi[i:i+rowsize], axis=-1)
                             for i in range(0, len(roi), rowsize)], axis=-2)
