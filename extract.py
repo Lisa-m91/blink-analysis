@@ -69,7 +69,7 @@ if __name__ == '__main__':
     from matplotlib.collections import LineCollection
 
     from numpy import percentile, concatenate, asarray
-    from random import sample
+    from random import seed, sample
 
     parser = ArgumentParser(description="Extract points from a video.")
     parser.add_argument("image", type=str, help="The video to process.")
@@ -88,8 +88,12 @@ if __name__ == '__main__':
                         help="The number of (randomly chosen) traces to display.")
     parser.add_argument("--on-threshold", type=float, nargs=2, default=(0.5, 0.3),
                         help="The fraction of the maximum value a spot has to rise above to be 'on'")
-
+    parser.add_argument("--seed", type=int, default=4,
+                        help="The seed to use for random processes (e.g. selecting sample traces)")
     args = parser.parse_args()
+
+    seed(args.seed)
+
     raw = imread(args.image, memmap=True)
     background = imread(args.background)
 
@@ -106,6 +110,7 @@ if __name__ == '__main__':
     peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
     peaks = asarray(list(peaks))
     rois = list(map(partial(extract, image=image, expansion=args.expansion), peaks))
+    samples = list(sample(rois, args.ntraces))
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -119,8 +124,6 @@ if __name__ == '__main__':
     ax.set_title("max intensity")
 
     fig = plt.figure()
-    ntraces = 5
-    samples = list(sample(rois, ntraces))
     vmin = min(map(np_min, samples))
     vmax = max(map(np_max, samples))
     plt_indices = range(1, len(samples) * 2, 2)
