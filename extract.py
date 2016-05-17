@@ -138,18 +138,23 @@ if __name__ == '__main__':
 
     on_times = []
     blink_times = []
+    blink_counts = []
     for roi, trace in zip(rois, traces):
-        on = trace > args.on_threshold
+        on = (trace > args.on_threshold).astype('int8')
 
         on_times.append(np_sum(on))
         blink_times.extend(blinkTimes(on))
+        blink_counts.append(np_sum((on[1:] - on[:-1]) == -1) + on[-1])
 
     fig = plt.figure()
-    ax = fig.add_subplot(2, 1, 1)
+    ax = fig.add_subplot(3, 1, 1)
     ax.set_title("On times")
     ax.hist(on_times, 30)
-    ax = fig.add_subplot(2, 1, 2)
+    ax = fig.add_subplot(3, 1, 2)
     ax.set_title("Blink times")
     ax.hist(blink_times, 30)
+    ax = fig.add_subplot(3, 1, 3)
+    ax.set_title("Blink counts")
+    ax.hist(blink_counts, 30)
 
     plt.show()
