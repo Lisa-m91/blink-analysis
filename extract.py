@@ -6,7 +6,7 @@ from tifffile import imread
 from blob import findBlobs
 
 from numpy import (std, mean, max as np_max, min as np_min, sum as np_sum,
-                   median, array, empty, fromiter as np_fromiter)
+                   median, array, empty, clip, fromiter as np_fromiter)
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
@@ -139,6 +139,7 @@ if __name__ == '__main__':
     on_times = []
     blink_times = []
     blink_counts = []
+    photon_counts = []
     for roi, trace in zip(rois, traces):
         on = (trace > args.on_threshold).astype('int8')
 
@@ -146,15 +147,23 @@ if __name__ == '__main__':
         blink_times.extend(blinkTimes(on))
         blink_counts.append(np_sum((on[1:] - on[:-1]) == -1) + on[-1])
 
+        background = mean(roi[~on])
+        # FIXME: Use raw intensity or intensity/background?
+        signal = clip(roi - background, a_min=0, a_max=float('inf'))
+        photon_counts.append(np_sum(signal))
+
     fig = plt.figure()
-    ax = fig.add_subplot(3, 1, 1)
+    ax = fig.add_subplot(4, 1, 1)
     ax.set_title("On times")
     ax.hist(on_times, 30)
-    ax = fig.add_subplot(3, 1, 2)
+    ax = fig.add_subplot(4, 1, 2)
     ax.set_title("Blink times")
     ax.hist(blink_times, 30)
-    ax = fig.add_subplot(3, 1, 3)
+    ax = fig.add_subplot(4, 1, 3)
     ax.set_title("Blink counts")
     ax.hist(blink_counts, 30)
+    ax = fig.add_subplot(4, 1, 4)
+    ax.set_title("Photon counts (AU)")
+    ax.hist(photon_counts, 30)
 
     plt.show()
