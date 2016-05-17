@@ -53,7 +53,7 @@ def blinkTimes(iterable):
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
-    import matplotlib.pyplot as plt
+    import matplotlib
     from matplotlib.cm import get_cmap
     from matplotlib.colors import ListedColormap, BoundaryNorm
     from matplotlib.collections import LineCollection
@@ -64,6 +64,8 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(description="Extract points from a video.")
     parser.add_argument("image", type=str, help="The video to process.")
+    parser.add_argument("plot", type=str, nargs='?',
+                        help="The base name for saving plots.")
     parser.add_argument("--background", type=str, help="A background image to correct for.")
     parser.add_argument("--spot-size", nargs=2, type=int, default=(2, 5),
                         help="The range of spot sizes to search for.")
@@ -82,6 +84,11 @@ if __name__ == '__main__':
     parser.add_argument("--seed", type=int, default=4,
                         help="The seed to use for random processes (e.g. selecting sample traces)")
     args = parser.parse_args()
+
+    if args.plot is not None:
+        matplotlib.use('agg')
+    # Must be imported after backend is set
+    import matplotlib.pyplot as plt
 
     seed(args.seed)
     p = Pool()
@@ -105,7 +112,7 @@ if __name__ == '__main__':
     traces = list(map(partial(np_max, axis=(1, 2)), rois))
     sample_idxs = list(sample(range(len(rois)), args.ntraces))
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8, 12))
     ax = fig.add_subplot(1, 1, 1)
     ax.imshow(proj, cmap=get_cmap('gray'), vmax=percentile(proj, 99.5))
     ax.scatter(peaks[:, 2], peaks[:, 1], s=peaks[:, 0] * 20,
@@ -116,8 +123,11 @@ if __name__ == '__main__':
     ax.set_xlim(0, proj.shape[0])
     ax.set_xticks([])
     ax.set_title("max intensity")
+    if args.plot is not None:
+        fig.tight_layout()
+        fig.savefig("{}_proj.png".format(args.plot))
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8, 12))
     samples = list(zip(map(rois.__getitem__, sample_idxs),
                        map(traces.__getitem__, sample_idxs)))
     vmin = min(map(lambda s: np_min(s[1]), samples))
@@ -149,6 +159,9 @@ if __name__ == '__main__':
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
+    if args.plot is not None:
+        fig.savefig("{}_traces.png".format(args.plot))
+
     on_times = []
     blink_times = []
     blink_counts = []
@@ -171,7 +184,7 @@ if __name__ == '__main__':
         blink_photons.extend(photons)
         photon_counts.append(sum(photons))
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8, 12))
     stats = [on_times, blink_times, blink_counts, photon_counts, blink_photons]
     titles = ["On times", "Blink times", "# of blinks", "# of photons (AU)", "photons/blink (AU)"]
     for i, (data, title) in enumerate(zip(stats, titles), start=1):
@@ -181,4 +194,9 @@ if __name__ == '__main__':
         bins = linspace(0, bound, min(bound, 20))
         ax.hist(data, bins)
 
-    plt.show()
+    if args.plot is not None:
+        fig.tight_layout()
+        fig.savefig("{}_stats.png".format(args.plot))
+
+    if args.plot is None:
+        plt.show()
