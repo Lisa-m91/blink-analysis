@@ -47,6 +47,8 @@ def blinkTimes(iterable):
         if not i and count > 0:
             yield count
         count = (count + 1) if i else 0
+    if count != 0:
+        yield count
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
