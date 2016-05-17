@@ -20,9 +20,12 @@ def peakEnclosed(peak, shape, expansion=1):
     return (all(scale <= p for p in pos) and
             all(scale < (s - p) for s, p in zip(shape, pos)))
 
-def rollingMedian(data, width):
+def rollingMedian(data, width, pool=None):
     slices = (data[start:start+width] for start in range(0, len(data) - (width - 1)))
-    return map(partial(median, axis=0), slices)
+    if pool is None:
+        return map(partial(median, axis=0), slices)
+    else:
+        return pool.imap(partial(median, axis=0), slices)
 
 def makeSegments(y, x=None):
     from numpy import arange, concatenate
@@ -55,6 +58,7 @@ if __name__ == '__main__':
 
     from numpy import percentile, concatenate, asarray
     from random import seed, sample
+    from multiprocessing import Pool
 
     parser = ArgumentParser(description="Extract points from a video.")
     parser.add_argument("image", type=str, help="The video to process.")
@@ -78,12 +82,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     seed(args.seed)
+    p = Pool()
 
     raw = imread(args.image, memmap=True)
     background = imread(args.background)
 
     image = empty((len(raw) - 2,) + raw.shape[1:], dtype='float32')
-    for i, frame in enumerate(rollingMedian(raw, 3)):
+    for i, frame in enumerate(rollingMedian(raw, 3, pool=p)):
         image[i] = frame / background
     del raw
 
