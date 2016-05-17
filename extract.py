@@ -32,6 +32,12 @@ def makeSegments(y, x=None):
     points = array([x, y]).T.reshape(-1, 1, 2)
     return concatenate([points[:-1], points[1:]], axis=1)
 
+def groupWith(a, b):
+    from itertools import groupby
+
+    for key, group in groupby(zip(b, a), lambda x: x[0]):
+        yield key, map(lambda x: x[1], group)
+
 def blinkTimes(iterable):
     count = 0
     for i in iterable:
@@ -140,6 +146,7 @@ if __name__ == '__main__':
     blink_times = []
     blink_counts = []
     photon_counts = []
+    blink_photons = []
     for roi, trace in zip(rois, traces):
         on = (trace > args.on_threshold).astype('int8')
 
@@ -150,20 +157,28 @@ if __name__ == '__main__':
         background = mean(roi[~on])
         # FIXME: Use raw intensity or intensity/background?
         signal = clip(roi - background, a_min=0, a_max=float('inf'))
-        photon_counts.append(np_sum(signal))
+
+        blinks = groupWith(signal, on)
+        on_blinks = map(lambda x: list(x[1]), filter(lambda x: x[0], blinks))
+        photons = list(map(np_sum, on_blinks))
+        blink_photons.extend(photons)
+        photon_counts.append(sum(photons))
 
     fig = plt.figure()
-    ax = fig.add_subplot(4, 1, 1)
+    ax = fig.add_subplot(5, 1, 1)
     ax.set_title("On times")
     ax.hist(on_times, 30)
-    ax = fig.add_subplot(4, 1, 2)
+    ax = fig.add_subplot(5, 1, 2)
     ax.set_title("Blink times")
     ax.hist(blink_times, 30)
-    ax = fig.add_subplot(4, 1, 3)
+    ax = fig.add_subplot(5, 1, 3)
     ax.set_title("Blink counts")
     ax.hist(blink_counts, 30)
-    ax = fig.add_subplot(4, 1, 4)
+    ax = fig.add_subplot(5, 1, 4)
     ax.set_title("Photon counts (AU)")
+    ax.hist(photon_counts, 30)
+    ax = fig.add_subplot(5, 1, 5)
+    ax.set_title("Per-blink photon counts (AU)")
     ax.hist(photon_counts, 30)
 
     plt.show()
