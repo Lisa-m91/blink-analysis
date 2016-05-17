@@ -6,7 +6,7 @@ from tifffile import imread
 from blob import findBlobs
 
 from numpy import (std, mean, max as np_max, min as np_min, sum as np_sum,
-                   median, array, empty, clip, fromiter as np_fromiter)
+                   median, array, empty, clip, fromiter as np_fromiter, linspace)
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
@@ -165,20 +165,13 @@ if __name__ == '__main__':
         photon_counts.append(sum(photons))
 
     fig = plt.figure()
-    ax = fig.add_subplot(5, 1, 1)
-    ax.set_title("On times")
-    ax.hist(on_times, 30)
-    ax = fig.add_subplot(5, 1, 2)
-    ax.set_title("Blink times")
-    ax.hist(blink_times, 30)
-    ax = fig.add_subplot(5, 1, 3)
-    ax.set_title("Blink counts")
-    ax.hist(blink_counts, 30)
-    ax = fig.add_subplot(5, 1, 4)
-    ax.set_title("Photon counts (AU)")
-    ax.hist(photon_counts, 30)
-    ax = fig.add_subplot(5, 1, 5)
-    ax.set_title("Per-blink photon counts (AU)")
-    ax.hist(photon_counts, 30)
+    stats = [on_times, blink_times, blink_counts, photon_counts, blink_photons]
+    titles = ["On times", "Blink times", "# of blinks", "# of photons (AU)", "photons/blink (AU)"]
+    for i, (data, title) in enumerate(zip(stats, titles), start=1):
+        ax = fig.add_subplot(len(titles), 1, i)
+        ax.set_title(title)
+        bound = percentile(data, 95)
+        bins = linspace(0, bound, min(bound, 20))
+        ax.hist(data, bins)
 
     plt.show()
