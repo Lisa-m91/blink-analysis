@@ -24,18 +24,6 @@ def rollingMedian(data, width):
     slices = (data[start:start+width] for start in range(0, len(data) - (width - 1)))
     return map(partial(median, axis=0), slices)
 
-def tupleReduce(iterable, *functions):
-    def reduction(acc, val):
-        return tuple(f(a, v) for f, a, v in zip(functions, acc, val))
-    return reduce(reduction, iterable)
-
-def getThresholds(data, thresholds):
-    from itertools import tee
-
-    data_range = tupleReduce(zip(*tee(data, 2)), min, max)
-    return (data_range[0] + (data_range[1] - data_range[0]) * thresholds[0],
-            data_range[0] + (data_range[1] - data_range[0]) * thresholds[1])
-
 def makeSegments(y, x=None):
     from numpy import arange, concatenate
 
@@ -43,15 +31,6 @@ def makeSegments(y, x=None):
         x = arange(len(y))
     points = array([x, y]).T.reshape(-1, 1, 2)
     return concatenate([points[:-1], points[1:]], axis=1)
-
-def categorize(iterable, on_threshold, off_threshold):
-    on = False
-    for i in iterable:
-        if on and i < off_threshold:
-            on = False
-        elif not on and i > on_threshold:
-            on = True
-        yield on
 
 def blinkTimes(iterable):
     count = 0
@@ -86,7 +65,7 @@ if __name__ == '__main__':
                         help="The amount to expand detected points by.")
     parser.add_argument("--ntraces", type=int, default=5,
                         help="The number of (randomly chosen) traces to display.")
-    parser.add_argument("--on-threshold", type=float, nargs=2, default=(0.5, 0.3),
+    parser.add_argument("--on-threshold", type=float, default=2.0,
                         help="The fraction of the maximum value a spot has to rise above to be 'on'")
     parser.add_argument("--seed", type=int, default=4,
                         help="The seed to use for random processes (e.g. selecting sample traces)")
@@ -132,9 +111,7 @@ if __name__ == '__main__':
     vmax = max(map(lambda s: np_max(s[1]), samples))
     plt_indices = range(1, len(samples) * 2, 2)
     for i, (roi, trace) in zip(plt_indices, samples):
-        thresholds = getThresholds(trace, args.on_threshold)
-        on = np_fromiter(map(int, categorize(trace, *thresholds)),
-                         dtype='uint8', count=len(trace))
+        on = trace > args.on_threshold
 
         cmap = ListedColormap(['r', 'b'])
         norm = BoundaryNorm([-float('inf'), 0.5, float('inf')], cmap.N)
@@ -148,8 +125,7 @@ if __name__ == '__main__':
         ax.add_collection(lc)
         ax.set_xlim(0, len(trace))
         ax.set_ylim(vmin, vmax)
-        ax.axhline(y=thresholds[0], color='green')
-        ax.axhline(y=thresholds[1], color='red')
+        ax.axhline(y=args.on_threshold)
 
         ax = fig.add_subplot(plt_indices.stop, 1, i+1)
         rowsize = 409 # Factors 8998
@@ -163,9 +139,8 @@ if __name__ == '__main__':
     on_times = []
     blink_times = []
     for roi, trace in zip(rois, traces):
-        thresholds = getThresholds(trace, args.on_threshold)
-        on = np_fromiter(map(int, categorize(trace, *thresholds)),
-                         dtype='uint8', count=len(trace))
+        on = trace > args.on_threshold
+
         on_times.append(np_sum(on))
         blink_times.extend(blinkTimes(on))
 
