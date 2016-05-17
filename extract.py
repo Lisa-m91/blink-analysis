@@ -110,13 +110,15 @@ if __name__ == '__main__':
     peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
     peaks = asarray(list(peaks))
     rois = list(map(partial(extract, image=image, expansion=args.expansion), peaks))
-    samples = list(sample(rois, args.ntraces))
+    traces = list(map(partial(np_max, axis=(1, 2)), rois))
+    sample_idxs = list(sample(range(len(rois)), args.ntraces))
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     ax.imshow(proj, cmap=get_cmap('gray'), vmax=percentile(proj, 99.5))
     ax.scatter(peaks[:, 2], peaks[:, 1], s=peaks[:, 0] * 20,
-               facecolors='None', edgecolors='g')
+               facecolors='None', edgecolors=['b' if idx not in sample_idxs else 'r'
+                                              for idx in range(len(rois))])
     ax.set_ylim(0, proj.shape[1])
     ax.set_yticks([])
     ax.set_xlim(0, proj.shape[0])
@@ -124,11 +126,12 @@ if __name__ == '__main__':
     ax.set_title("max intensity")
 
     fig = plt.figure()
-    vmin = min(map(np_min, samples))
-    vmax = max(map(np_max, samples))
+    samples = list(zip(map(rois.__getitem__, sample_idxs),
+                       map(traces.__getitem__, sample_idxs)))
+    vmin = min(map(lambda s: np_min(s[1]), samples))
+    vmax = max(map(lambda s: np_max(s[1]), samples))
     plt_indices = range(1, len(samples) * 2, 2)
-    for i, roi in zip(plt_indices, samples):
-        trace = np_max(roi, axis=(1, 2))
+    for i, (roi, trace) in zip(plt_indices, samples):
         thresholds = getThresholds(trace, args.on_threshold)
         on = np_fromiter(map(int, categorize(trace, *thresholds)),
                          dtype='uint8', count=len(trace))
@@ -159,8 +162,7 @@ if __name__ == '__main__':
 
     on_times = []
     blink_times = []
-    for roi in rois:
-        trace = np_max(roi, axis=(1, 2))
+    for roi, trace in zip(rois, traces):
         thresholds = getThresholds(trace, args.on_threshold)
         on = np_fromiter(map(int, categorize(trace, *thresholds)),
                          dtype='uint8', count=len(trace))
