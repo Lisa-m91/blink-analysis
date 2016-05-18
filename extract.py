@@ -52,6 +52,7 @@ def blinkTimes(iterable):
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
+    import csv
 
     import matplotlib
     from matplotlib.cm import get_cmap
@@ -189,8 +190,21 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(8, 12))
     stats = [on_times, blink_times, blink_counts, photon_counts,
              blink_photons, frame_photons]
-    titles = ["On times", "Blink times", "# of blinks", "# of photons (AU)",
-              "photons/blink (AU)", "photons/frame (AU)"]
+    titles = ["on times", "blink times", "# of blinks", "# of photons",
+              "photons/blink", "photons/frame (AU)"]
+
+    if args.plot is not None:
+        with open("{}_stats_summary.csv".format(args.plot), 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=("name", "mean", "standard deviation"))
+            writer.writeheader()
+            for title, stat in zip(titles, stats):
+                writer.writerow({"name": title, "mean": mean(stat),
+                                 "standard deviation": std(stat)})
+    else:
+        for title, stat in zip(titles, stats):
+            print("{}: μ = {}, σ = {}".format(title, mean(stat, std(stat))))
+
+
     for i, (data, title) in enumerate(zip(stats, titles), start=1):
         ax = fig.add_subplot(len(titles) // 2, 2, i)
         ax.set_title(title)
