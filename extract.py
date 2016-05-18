@@ -167,6 +167,7 @@ if __name__ == '__main__':
     blink_counts = []
     photon_counts = []
     blink_photons = []
+    frame_photons = []
     for roi, trace in zip(rois, traces):
         on = (trace > args.on_threshold).astype('int8')
 
@@ -177,6 +178,7 @@ if __name__ == '__main__':
         background = mean(roi[~on])
         # FIXME: Use raw intensity or intensity/background?
         signal = clip(roi - background, a_min=0, a_max=float('inf'))
+        frame_photons.extend(map(np_sum, signal[on]))
 
         blinks = groupWith(signal, on)
         on_blinks = map(lambda x: list(x[1]), filter(lambda x: x[0], blinks))
@@ -185,10 +187,12 @@ if __name__ == '__main__':
         photon_counts.append(sum(photons))
 
     fig = plt.figure(figsize=(8, 12))
-    stats = [on_times, blink_times, blink_counts, photon_counts, blink_photons]
-    titles = ["On times", "Blink times", "# of blinks", "# of photons (AU)", "photons/blink (AU)"]
+    stats = [on_times, blink_times, blink_counts, photon_counts,
+             blink_photons, frame_photons]
+    titles = ["On times", "Blink times", "# of blinks", "# of photons (AU)",
+              "photons/blink (AU)", "photons/frame (AU)"]
     for i, (data, title) in enumerate(zip(stats, titles), start=1):
-        ax = fig.add_subplot(len(titles), 1, i)
+        ax = fig.add_subplot(len(titles) // 2, 2, i)
         ax.set_title(title)
         bound = percentile(data, 95)
         bins = linspace(0, bound, min(bound, 20))
