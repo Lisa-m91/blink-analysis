@@ -64,8 +64,6 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(description="Extract points from a video.")
     parser.add_argument("image", type=str, help="The video to process.")
-    parser.add_argument("plot", type=str, nargs='?',
-                        help="The base name for saving plots.")
     parser.add_argument("--background", type=str, help="A background image to correct for.")
     parser.add_argument("--spot-size", nargs=2, type=int, default=(2, 5),
                         help="The range of spot sizes to search for.")
@@ -83,9 +81,11 @@ if __name__ == '__main__':
                         help="The fraction of the maximum value a spot has to rise above to be 'on'")
     parser.add_argument("--seed", type=int, default=4,
                         help="The seed to use for random processes (e.g. selecting sample traces)")
+    parser.add_argument("--output", type=str, required=False,
+                        help="The base name for saving data.")
     args = parser.parse_args()
 
-    if args.plot is not None:
+    if args.output is not None:
         matplotlib.use('agg')
     # Must be imported after backend is set
     import matplotlib.pyplot as plt
@@ -123,9 +123,9 @@ if __name__ == '__main__':
     ax.set_xlim(0, proj.shape[0])
     ax.set_xticks([])
     ax.set_title("max intensity")
-    if args.plot is not None:
+    if args.output is not None:
         fig.tight_layout()
-        fig.savefig("{}_proj.png".format(args.plot))
+        fig.savefig("{}_proj.png".format(args.output))
 
     fig = plt.figure(figsize=(8, 12))
     samples = list(zip(map(rois.__getitem__, sample_idxs),
@@ -159,8 +159,8 @@ if __name__ == '__main__':
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
-    if args.plot is not None:
-        fig.savefig("{}_traces.png".format(args.plot))
+    if args.output is not None:
+        fig.savefig("{}_traces.png".format(args.output))
 
     on_times = []
     blink_times = []
@@ -192,8 +192,8 @@ if __name__ == '__main__':
     titles = ["on times", "blink times", "# of blinks", "# of photons",
               "photons/blink", "photons/frame (AU)"]
 
-    if args.plot is not None:
-        with open("{}_stats_summary.csv".format(args.plot), 'w', newline='') as f:
+    if args.output is not None:
+        with open("{}_stats_summary.csv".format(args.output), 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=("name", "mean", "standard deviation"))
             writer.writeheader()
             for title, stat in zip(titles, stats):
@@ -211,9 +211,9 @@ if __name__ == '__main__':
         bins = linspace(0, bound, min(bound, 20))
         ax.hist(data, bins)
 
-    if args.plot is not None:
+    if args.output is not None:
         fig.tight_layout()
-        fig.savefig("{}_stats.png".format(args.plot))
+        fig.savefig("{}_stats.png".format(args.output))
 
-    if args.plot is None:
+    if args.output is None:
         plt.show()
