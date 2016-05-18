@@ -5,8 +5,7 @@ from tifffile import imread
 
 from blob import findBlobs
 
-from numpy import (std, mean, max as np_max, min as np_min, sum as np_sum,
-                   median, array, empty, clip, fromiter as np_fromiter, linspace)
+from numpy import (std, mean, amax, amin, sum as asum, median, array, empty, clip, linspace)
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
@@ -102,7 +101,7 @@ if __name__ == '__main__':
         image[i] = frame / background
     del raw
 
-    proj = np_max(image, axis=0)
+    proj = amax(image, axis=0)
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.blob_threshold, max_overlap=args.max_overlap)
 
@@ -110,7 +109,7 @@ if __name__ == '__main__':
     peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
     peaks = asarray(list(peaks))
     rois = list(map(partial(extract, image=image, expansion=args.expansion), peaks))
-    traces = list(map(partial(np_max, axis=(1, 2)), rois))
+    traces = list(map(partial(amax, axis=(1, 2)), rois))
     sample_idxs = list(sample(range(len(rois)), args.ntraces))
 
     fig = plt.figure(figsize=(8, 12))
@@ -131,8 +130,8 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(8, 12))
     samples = list(zip(map(rois.__getitem__, sample_idxs),
                        map(traces.__getitem__, sample_idxs)))
-    vmin = min(map(lambda s: np_min(s[1]), samples))
-    vmax = max(map(lambda s: np_max(s[1]), samples))
+    vmin = min(map(lambda s: amin(s[1]), samples))
+    vmax = max(map(lambda s: amax(s[1]), samples))
     plt_indices = range(1, len(samples) * 2, 2)
     for i, (roi, trace) in zip(plt_indices, samples):
         on = trace > args.on_threshold
@@ -172,18 +171,18 @@ if __name__ == '__main__':
     for roi, trace in zip(rois, traces):
         on = (trace > args.on_threshold).astype('int8')
 
-        on_times.append(np_sum(on))
+        on_times.append(asum(on))
         blink_times.extend(blinkTimes(on))
-        blink_counts.append(np_sum((on[1:] - on[:-1]) == -1) + on[-1])
+        blink_counts.append(asum((on[1:] - on[:-1]) == -1) + on[-1])
 
         background = mean(roi[~on])
         # FIXME: Use raw intensity or intensity/background?
         signal = clip(roi - background, a_min=0, a_max=float('inf'))
-        frame_photons.extend(map(np_sum, signal[on]))
+        frame_photons.extend(map(asum, signal[on]))
 
         blinks = groupWith(signal, on)
         on_blinks = map(lambda x: list(x[1]), filter(lambda x: x[0], blinks))
-        photons = list(map(np_sum, on_blinks))
+        photons = list(map(asum, on_blinks))
         blink_photons.extend(photons)
         photon_counts.append(sum(photons))
 
