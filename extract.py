@@ -5,7 +5,7 @@ from tifffile import imread
 
 from blob import findBlobs
 
-from numpy import (std, mean, amax, amin, sum as asum, median, array, empty, clip, linspace)
+from numpy import (std, mean, amax, amin, sum as asum, median, array, empty, clip, copy, linspace)
 
 def extract(peak, image, expansion=1):
     scale, *pos = peak
@@ -49,6 +49,14 @@ def blinkTimes(iterable):
     if count != 0:
         yield count
 
+def arrangeSubplots(n):
+    from math import ceil, sqrt
+
+    nrows = ceil(sqrt(n))
+    ncols = ceil(n / nrows)
+
+    return nrows, ncols
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
     import csv
@@ -63,8 +71,7 @@ if __name__ == '__main__':
     from multiprocessing import Pool
 
     parser = ArgumentParser(description="Extract points from a video.")
-    parser.add_argument("image", type=str, help="The video to process.")
-    parser.add_argument("--background", type=str, help="A background image to correct for.")
+    parser.add_argument("images", nargs='+', type=str, help="The video to process.")
     parser.add_argument("--spot-size", nargs=2, type=int, default=(2, 5),
                         help="The range of spot sizes to search for.")
     parser.add_argument("--max-overlap", type=float, default=0.05,
@@ -93,39 +100,44 @@ if __name__ == '__main__':
     seed(args.seed)
     p = Pool()
 
-    raw = imread(args.image, memmap=True)
-    background = imread(args.background)
-
-    image = empty((len(raw) - 2,) + raw.shape[1:], dtype='float32')
-    for i, frame in enumerate(rollingMedian(raw, 3, pool=p)):
-        image[i] = frame / background
-    del raw
-
-    proj = amax(image, axis=0)
-    peaks = findBlobs(proj, scales=range(*args.spot_size),
-                      threshold=args.blob_threshold, max_overlap=args.max_overlap)
-
-    # Exclude partial ROIs on edge
-    peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
-    peaks = asarray(list(peaks))
-    rois = list(map(partial(extract, image=image, expansion=args.expansion), peaks))
-    traces = list(map(partial(amax, axis=(1, 2)), rois))
-    sample_idxs = list(sample(range(len(rois)), args.ntraces))
-
     fig = plt.figure(figsize=(8, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.imshow(proj, cmap=get_cmap('gray'), vmax=percentile(proj, 99.5))
-    ax.scatter(peaks[:, 2], peaks[:, 1], s=peaks[:, 0] * 20,
-               facecolors='None', edgecolors=['b' if idx not in sample_idxs else 'r'
-                                              for idx in range(len(rois))])
-    ax.set_ylim(0, proj.shape[1])
-    ax.set_yticks([])
-    ax.set_xlim(0, proj.shape[0])
-    ax.set_xticks([])
-    ax.set_title("max intensity")
+    fig.suptitle("peak locations")
+
+    rois = []
+    peak_counts = []
+    peak_axs = map(partial(fig.add_subplot, *arrangeSubplots(len(args.images))),
+                   range(1, len(args.images)+1))
+    for image_name, ax in zip(args.images, peak_axs):
+        raw = imread(image_name)
+        background = percentile(raw, 15.0, axis=0)
+
+        image = empty((len(raw) - 2,) + raw.shape[1:], dtype='float32')
+        for i, frame in enumerate(rollingMedian(raw, 3, pool=p)):
+            image[i] = frame / background
+        del raw
+
+        proj = amax(image, axis=0)
+        peaks = findBlobs(proj, scales=range(*args.spot_size),
+                          threshold=args.blob_threshold, max_overlap=args.max_overlap)
+
+        # Exclude partial ROIs on edge
+        peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
+        rois.extend(map(copy, map(partial(extract, image=image, expansion=args.expansion), peaks)))
+        peak_counts.append(len(rois) - sum(peak_counts))
+
+        ax.imshow(proj, cmap=get_cmap('gray'), vmax=percentile(proj, 99.5))
+        ax.set_ylim(0, proj.shape[1])
+        ax.set_yticks([])
+        ax.set_xlim(0, proj.shape[0])
+        ax.set_xticks([])
+    del image
+
     if args.output is not None:
         fig.tight_layout()
         fig.savefig("{}_proj.png".format(args.output))
+
+    traces = list(map(partial(amax, axis=(1, 2)), rois))
+    sample_idxs = list(sample(range(len(rois)), args.ntraces))
 
     fig = plt.figure(figsize=(8, 12))
     samples = list(zip(map(rois.__getitem__, sample_idxs),
