@@ -181,22 +181,21 @@ if __name__ == '__main__':
     blink_photons = []
     frame_photons = []
     for roi, trace in zip(rois, traces):
-        on = (trace > args.on_threshold).astype('int8')
+        on = (trace > args.on_threshold)
 
-        on_times.append(asum(on))
-        blink_times.extend(blinkTimes(on))
-        blink_counts.append(asum((on[1:] - on[:-1]) == -1) + on[-1])
-
-        background = mean(roi[~on])
         # FIXME: Use raw intensity or intensity/background?
+        background = mean(roi[~on])
         signal = clip(roi - background, a_min=0, a_max=float('inf'))
-        frame_photons.extend(map(asum, signal[on]))
-
         blinks = groupWith(signal, on)
-        on_blinks = map(lambda x: list(x[1]), filter(lambda x: x[0], blinks))
-        photons = list(map(asum, on_blinks))
-        blink_photons.extend(photons)
-        photon_counts.append(sum(photons))
+        on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
+
+        photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
+        frame_photons.extend(chain.from_iterable(photons_by_blink))
+        blink_photons.extend(map(sum, photons_by_blink))
+        photon_counts.append(sum(map(sum, photons_by_blink)))
+        blink_times.extend(map(len, photons_by_blink))
+        on_times.append(sum(map(len, photons_by_blink)))
+        blink_counts.append(len(photons_by_blink))
 
     fig = plt.figure(figsize=(8, 12))
     stats = [on_times, blink_times, blink_counts, photon_counts,
