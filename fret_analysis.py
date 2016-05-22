@@ -29,7 +29,7 @@ def groupWith(a, b):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
-    from sys import stdin
+    from pathlib import Path
 
     import matplotlib
     from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -38,6 +38,8 @@ if __name__ == "__main__":
     import csv
 
     parser = ArgumentParser(description="Analyze single-particle traces.")
+    parser.add_argument("rois", nargs='+', type=Path,
+                        help="The pickled ROIs to process")
     parser.add_argument("--threshold", type=float, default=2.0,
                         help="The fold-increase over background necessary for a spot to be on.")
     parser.add_argument("--ntraces", type=int, default=5,
@@ -56,17 +58,21 @@ if __name__ == "__main__":
     # Must be imported after backend is set
     import matplotlib.pyplot as plt
 
-    rois = list(loadAll(stdin.buffer))
-    traces = list(map(partial(amax, axis=(1, 2)), rois))
+    rois = []
+    for roi_path in args.rois:
+        with roi_path.open("rb") as f:
+            rois.append(list(loadAll(f)))
+    traces = list(map(list, map(partial(map, partial(amax, axis=(1, 2))), rois)))
+    nrois = sum(map(len, rois))
 
     fig = plt.figure(figsize=(8, 12))
-    sample_idxs = list(sample(range(len(rois)), args.ntraces))
-    samples = list(zip(map(rois.__getitem__, sample_idxs),
-                       map(traces.__getitem__, sample_idxs)))
-    vmin = min(map(lambda s: amin(s[1]), samples))
-    vmax = max(map(lambda s: amax(s[1]), samples))
-    plt_indices = range(1, len(samples * 2), 2)
-    for i, (roi, trace) in zip(plt_indices, samples):
+    sample_idxs = list(sample(range(sum(map(len, rois))), args.ntraces))
+    sample_rois  = map(list(chain.from_iterable(rois)).__getitem__, sample_idxs)
+    sample_traces = list(map(list(chain.from_iterable(traces)).__getitem__, sample_idxs))
+    vmin = min(map(amin, sample_traces))
+    vmax = max(map(amax, sample_traces))
+    plt_indices = range(1, len(sample_idxs) * 2, 2)
+    for i, roi, trace in zip(plt_indices, sample_rois, sample_traces):
         on = trace > args.threshold
 
         cmap = ListedColormap(['r', 'b'])
@@ -102,22 +108,35 @@ if __name__ == "__main__":
     photon_counts = []
     blink_photons = []
     frame_photons = []
-    for roi, trace in zip(rois, traces):
-        on = (trace > args.threshold)
+    for ds_rois, ds_traces in zip(rois, traces):
+        ds_on_times = []
+        ds_blink_times = []
+        ds_blink_counts = []
+        ds_photon_counts = []
+        ds_blink_photons = []
+        ds_frame_photons = []
+        for roi, trace in zip(ds_rois, ds_traces):
+            on = (trace > args.threshold)
 
-        # FIXME: Use raw intensity or intensity/background?
-        background = mean(roi[~on])
-        signal = clip(roi - background, a_min=0, a_max=float('inf'))
-        blinks = groupWith(signal, on)
-        on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
+            # FIXME: Use raw intensity or intensity/background?
+            background = mean(roi[~on])
+            signal = clip(roi - background, a_min=0, a_max=float('inf'))
+            blinks = groupWith(signal, on)
+            on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
 
-        photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-        frame_photons.extend(chain.from_iterable(photons_by_blink))
-        blink_photons.extend(map(sum, photons_by_blink))
-        photon_counts.append(sum(map(sum, photons_by_blink)))
-        blink_times.extend(map(len, photons_by_blink))
-        on_times.append(sum(map(len, photons_by_blink)))
-        blink_counts.append(len(photons_by_blink))
+            photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
+            ds_frame_photons.extend(chain.from_iterable(photons_by_blink))
+            ds_blink_photons.extend(map(sum, photons_by_blink))
+            ds_photon_counts.append(sum(map(sum, photons_by_blink)))
+            ds_blink_times.extend(map(len, photons_by_blink))
+            ds_on_times.append(sum(map(len, photons_by_blink)))
+            ds_blink_counts.append(len(photons_by_blink))
+        on_times.append(ds_on_times)
+        blink_times.append(ds_blink_times)
+        blink_counts.append(ds_blink_counts)
+        photon_counts.append(ds_photon_counts)
+        blink_photons.append(ds_blink_photons)
+        frame_photons.append(ds_frame_photons)
 
     fig = plt.figure(figsize=(8, 12))
     stats = [on_times, blink_times, blink_counts, photon_counts,
@@ -130,16 +149,21 @@ if __name__ == "__main__":
             writer = csv.DictWriter(f, fieldnames=("name", "mean", "standard deviation"))
             writer.writeheader()
             for title, stat in zip(titles, stats):
-                writer.writerow({"name": title, "mean": mean(stat),
-                                 "standard deviation": std(stat)})
+                grand_mean = mean(list(chain.from_iterable(stat)))
+                variation = std(list(map(mean, stat)))
+                writer.writerow({"name": title, "mean": grand_mean,
+                                 "standard deviation": variation})
     else:
         for title, stat in zip(titles, stats):
-            print("{}: μ = {}, σ = {}".format(title, mean(stat, std(stat))))
+            grand_mean = mean(list(chain.from_iterable(stat)))
+            variation = std(list(map(mean, stat)))
+            print("{}: μ = {}, σ = {}".format(title, grand_mean, variation))
 
 
     axes = map(partial(fig.add_subplot, len(titles) // 2, 2),
                range(1, len(titles) + 1))
-    for ax, data, title in zip(axes, stats, titles):
+    for ax, data_sets, title in zip(axes, stats, titles):
+        data = list(chain.from_iterable(data_sets))
         ax.set_title(title)
         bound = percentile(data, 95)
         bins = linspace(0, bound, min(bound, 20))
