@@ -2,7 +2,7 @@
 from functools import partial
 from pickle import dump, HIGHEST_PROTOCOL
 
-from tifffile import imread
+from tifffile import TiffFile
 
 from blob import findBlobs
 
@@ -35,6 +35,25 @@ def arrangeSubplots(n):
 
     return nrows, ncols
 
+def tiffConcat(*series):
+    from itertools import accumulate, tee, islice, starmap, chain
+    from numpy import empty
+    from tifffile.tifffile import TiffPageSeries
+
+    lengths = list(map(lambda img: img.shape[0], series))
+    offsets = accumulate(chain((0,), lengths))
+
+    shape = (sum(lengths),) + series[0].shape[1:]
+    result = empty(shape, dtype=series[0].dtype)
+
+    offsets, ends = tee(offsets, 2)
+    ends = islice(ends, 1, None)
+    slices = starmap(slice, zip(offsets, ends))
+
+    for img, s in zip(map(TiffPageSeries.asarray, series), slices):
+        result[s] = img
+    return result
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from sys import stdout
@@ -43,7 +62,7 @@ if __name__ == '__main__':
     from multiprocessing import Pool
 
     parser = ArgumentParser(description="Extract points from a video.")
-    parser.add_argument("image", type=str, help="The video to process.")
+    parser.add_argument("images", nargs='+', type=TiffFile, help="The video to process.")
     parser.add_argument("--spot-size", nargs=2, type=int, default=(2, 5),
                         help="The range of spot sizes to search for.")
     parser.add_argument("--max-overlap", type=float, default=0.05,
@@ -56,7 +75,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     p = Pool()
 
-    raw = imread(args.image)
+    raw = tiffConcat(*(tif.series[0] for tif in args.images))
     background = percentile(raw, 15.0, axis=0)
 
     image = empty((len(raw) - 2,) + raw.shape[1:], dtype='float32')
@@ -66,7 +85,7 @@ if __name__ == '__main__':
 
     proj = amax(image, axis=0)
     peaks = findBlobs(proj, scales=range(*args.spot_size),
-                        threshold=args.blob_threshold, max_overlap=args.max_overlap)
+                        threshold=args.threshold, max_overlap=args.max_overlap)
 
     peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
     rois = map(partial(extract, image=image, expansion=args.expansion), peaks)
