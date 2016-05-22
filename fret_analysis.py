@@ -2,6 +2,7 @@
 from itertools import chain
 from functools import partial
 from numpy import amax, amin, sum as asum, mean, std, percentile, clip, linspace
+from collections import OrderedDict
 
 def loadAll(f):
     from pickle import load
@@ -47,19 +48,10 @@ if __name__ == "__main__":
     traces = list(map(list, map(partial(map, partial(amax, axis=(1, 2))), rois)))
     nrois = sum(map(len, rois))
 
-    on_times = []
-    blink_times = []
-    blink_counts = []
-    photon_counts = []
-    blink_photons = []
-    frame_photons = []
+    stats = OrderedDict([("on times", []), ("blink times", []), ("# of blinks", []),
+                         ("# of photons", []), ("photons/blink", []), ("photons/frame", [])])
     for ds_rois, ds_traces in zip(rois, traces):
-        ds_on_times = []
-        ds_blink_times = []
-        ds_blink_counts = []
-        ds_photon_counts = []
-        ds_blink_photons = []
-        ds_frame_photons = []
+        ds_stats = {k: [] for k in stats.keys()}
         for roi, trace in zip(ds_rois, ds_traces):
             on = (trace > args.threshold)
 
@@ -70,44 +62,36 @@ if __name__ == "__main__":
             on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
 
             photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-            ds_frame_photons.extend(chain.from_iterable(photons_by_blink))
-            ds_blink_photons.extend(map(sum, photons_by_blink))
-            ds_photon_counts.append(sum(map(sum, photons_by_blink)))
-            ds_blink_times.extend(map(len, photons_by_blink))
-            ds_on_times.append(sum(map(len, photons_by_blink)))
-            ds_blink_counts.append(len(photons_by_blink))
-        on_times.append(ds_on_times)
-        blink_times.append(ds_blink_times)
-        blink_counts.append(ds_blink_counts)
-        photon_counts.append(ds_photon_counts)
-        blink_photons.append(ds_blink_photons)
-        frame_photons.append(ds_frame_photons)
+            ds_stats["photons/frame"].extend(chain.from_iterable(photons_by_blink))
+            ds_stats["photons/blink"].extend(map(sum, photons_by_blink))
+            ds_stats["# of photons"].append(sum(map(sum, photons_by_blink)))
+            ds_stats["blink times"].extend(map(len, photons_by_blink))
+            ds_stats["on times"].append(sum(map(len, photons_by_blink)))
+            ds_stats["# of blinks"].append(len(photons_by_blink))
+        for k, v in ds_stats.items():
+            stats[k].append(v)
 
     fig = plt.figure(figsize=(8, 12))
-    stats = [on_times, blink_times, blink_counts, photon_counts,
-             blink_photons, frame_photons]
-    titles = ["on times", "blink times", "# of blinks", "# of photons",
-              "photons/blink", "photons/frame (AU)"]
 
     if args.output is not None:
         with open("{}_stats_summary.csv".format(args.output), 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=("name", "mean", "standard deviation"))
             writer.writeheader()
-            for title, stat in zip(titles, stats):
+            for title, stat in stats.items():
                 grand_mean = mean(list(chain.from_iterable(stat)))
                 variation = std(list(map(mean, stat)))
                 writer.writerow({"name": title, "mean": grand_mean,
                                  "standard deviation": variation})
     else:
-        for title, stat in zip(titles, stats):
+        for title, stat in stats.items():
             grand_mean = mean(list(chain.from_iterable(stat)))
             variation = std(list(map(mean, stat)))
             print("{}: μ = {}, σ = {}".format(title, grand_mean, variation))
 
 
-    axes = map(partial(fig.add_subplot, len(titles) // 2, 2),
-               range(1, len(titles) + 1))
-    for ax, data_sets, title in zip(axes, stats, titles):
+    axes = map(partial(fig.add_subplot, len(stats) // 2, 2),
+               range(1, len(stats) + 1))
+    for ax, (title, data_sets) in zip(axes, stats.items()):
         data = list(chain.from_iterable(data_sets))
         ax.set_title(title)
         bound = percentile(data, 95)
