@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import amax, amin, concatenate
+from numpy import amax, amin, concatenate, pad
 from random import sample, seed
 
 def loadAll(f):
@@ -82,9 +82,12 @@ if __name__ == "__main__":
         ax.axhline(y=args.threshold)
 
         ax = fig.add_subplot(plt_indices.stop, 1, i+1)
-        rowsize = 409 # Factors 8998
-        show = concatenate([concatenate(roi[i:i+rowsize], axis=-1)
-                            for i in range(0, len(roi), rowsize)], axis=-2)
+        rowsize = 400
+        framesize = roi[0].shape
+        rows = [concatenate(roi[i:i+rowsize], axis=1)
+                for i in range(0, len(roi), rowsize)]
+        show = concatenate([pad(row, [(0, 0), (0, framesize[1] * rowsize - row.shape[1])],
+                                mode='constant', constant_values=0) for row in rows])
         ax.imshow(show, vmax=vmax, vmin=vmin,
                   cmap=get_cmap('gray'), interpolation="nearest")
         ax.get_xaxis().set_ticks([])
