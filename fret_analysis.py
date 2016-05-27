@@ -41,34 +41,29 @@ if __name__ == "__main__":
     # Must be imported after backend is set
     import matplotlib.pyplot as plt
 
-    experiments = defaultdict(list)
+    stats = defaultdict(lambda: defaultdict(list))
     for experiment in args.experiment:
         name = experiment[0]
-        for dataset in map(Path, experiment[1:]):
-            with dataset.open("rb") as f:
-                experiments[name].append(list(loadAll(f)))
-
-    stats = defaultdict(lambda: defaultdict(list))
-    for name, datasets in experiments.items():
-        for dataset in datasets:
+        for datafile in map(Path, experiment[1:]):
             ds_stats = defaultdict(list)
-            for roi in dataset:
-                trace = amax(roi, axis=(1, 2))
-                on = (trace > args.threshold)
+            with datafile.open("rb") as f:
+                for roi in loadAll(f):
+                    trace = amax(roi, axis=(1, 2))
+                    on = (trace > args.threshold)
 
-                background = mean(roi[~on])
-                # FIXME: Use raw intensity or intensity/background?
-                signal = clip(roi - background, a_min=0, a_max=float('inf'))
-                blinks = groupWith(signal, on)
-                on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
+                    background = mean(roi[~on])
+                    # FIXME: Use raw intensity or intensity/background?
+                    signal = clip(roi - background, a_min=0, a_max=float('inf'))
+                    blinks = groupWith(signal, on)
+                    on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
 
-                photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-                ds_stats["photons/frame"].extend(chain.from_iterable(photons_by_blink))
-                ds_stats["photons/blink"].extend(map(sum, photons_by_blink))
-                ds_stats["# of photons"].append(sum(map(sum, photons_by_blink)))
-                ds_stats["blink times"].extend(map(len, photons_by_blink))
-                ds_stats["on times"].append(sum(map(len, photons_by_blink)))
-                ds_stats["# of blinks"].append(len(photons_by_blink))
+                    photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
+                    ds_stats["photons/frame"].extend(chain.from_iterable(photons_by_blink))
+                    ds_stats["photons/blink"].extend(map(sum, photons_by_blink))
+                    ds_stats["# of photons"].append(sum(map(sum, photons_by_blink)))
+                    ds_stats["blink times"].extend(map(len, photons_by_blink))
+                    ds_stats["on times"].append(sum(map(len, photons_by_blink)))
+                    ds_stats["# of blinks"].append(len(photons_by_blink))
 
             for stat, v in ds_stats.items():
                 stats[name][stat].append(v)
