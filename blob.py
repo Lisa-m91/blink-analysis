@@ -76,13 +76,14 @@ def blobLOG(data, scales=range(1, 10, 1), threshold=-30):
     return peaks
 
 def sphereIntersection(r1, r2, d):
-    # http://mathworld.wolfram.com/Sphere-SphereIntersection.html
+    # https://en.wikipedia.org/wiki/Spherical_cap#Application
 
+    valid = (d < (r1 + r2)) & (d > 0)
     return (pi * (r1 + r2 - d) ** 2
             * (d ** 2 + 6 * r2 * r1
-               + 2 * d * r1 - 3 * r1 ** 2
-               + 2 * d * r2 - 3 * r2 ** 2)
-            / (12 * d))
+               + 2 * d * (r1 + r2)
+               - 3 * (r1 - r2) ** 2)
+            / (12 * d)) * valid
 
 def circleIntersection(r1, r2, d):
     # http://mathworld.wolfram.com/Circle-CircleIntersection.html
