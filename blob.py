@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from numpy import zeros
 from numpy.linalg import norm
 from math import pi
@@ -119,16 +121,19 @@ def findBlobs(img, scales=range(1, 10), threshold=30, max_overlap=0.05):
     return peaks[~delete]
 
 if __name__ == '__main__':
-    from tifffile import imread
+    from argparse import ArgumentParser
     from pathlib import Path
-    from matplotlib import pyplot as plt
-    from matplotlib.cm import get_cmap
 
-    image = (imread(str(Path(__file__).parent / "hubble_deep_field.tif"))[:500, :500, :]
-             .astype('float32').sum(axis=2))
-    peaks = findBlobs(image, range(1, 30, 3), 0.05)
+    from tifffile import imread
 
-    plt.imshow(image, cmap=get_cmap('gray'))
-    plt.scatter(peaks[:, 2], peaks[:, 1], s=peaks[:, 0] * 20,
-                facecolors='none', edgecolors='g')
-    plt.show()
+    parser = ArgumentParser(description="Print a list of spots from an image")
+    parser.add_argument("image", type=Path, help="The image to process")
+    parser.add_argument("--size", type=int, nargs=2, default=(1, 1),
+                        help="The range of sizes (in px) to search.")
+    parser.add_argument("--threshold", type=float, default=5,
+                        help="The minimum spot intensity")
+    args = parser.parse_args()
+
+    image = imread(str(args.image)).astype('float32')
+    for peak in findBlobs(image, range(*args.size), args.threshold):
+        print(peak[1:], peak[0])
