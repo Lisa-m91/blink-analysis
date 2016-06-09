@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from numpy import zeros
+from numpy import zeros, ones, asarray
 from numpy.linalg import norm
 from math import pi
 
@@ -123,6 +123,8 @@ def findBlobs(img, scales=range(1, 10), threshold=30, max_overlap=0.05):
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from pathlib import Path
+    import sys
+    import csv
 
     from tifffile import imread
 
@@ -132,8 +134,24 @@ if __name__ == '__main__':
                         help="The range of sizes (in px) to search.")
     parser.add_argument("--threshold", type=float, default=5,
                         help="The minimum spot intensity")
+    parser.add_argument("--plot", action="store_true",
+                        help="Plot the extracted points on a maximum intensity projection.")
+    parser.add_argument("--scale", nargs="*", type=float,
+                       help="The scale for the points along each axis.")
+
     args = parser.parse_args()
 
     image = imread(str(args.image)).astype('float32')
-    for peak in findBlobs(image, range(*args.size), args.threshold):
-        print(peak[1:], peak[0])
+    scale = asarray(args.scale) if args.scale else ones(image.ndim)
+    blobs = findBlobs(image, range(*args.size), args.threshold)
+    writer = csv.writer(sys.stdout, delimiter=' ')
+    for blob in blobs:
+        writer.writerow(blob[1:][::-1] * scale)
+    if args.plot:
+        import matplotlib.pyplot as plt
+        from numpy import amax
+
+        proj = amax(image, axis=tuple(range(image.ndim - 2)))
+        plt.imshow(proj)
+        plt.scatter(blobs[:, -1], blobs[:, -2])
+        plt.show()
