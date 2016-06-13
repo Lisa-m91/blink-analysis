@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
-from functools import partial
+from functools import partial, reduce
 from pickle import dump, HIGHEST_PROTOCOL
 
 from tifffile import TiffFile
 
 from blob import findBlobs
 
-from numpy import amax, median, percentile, empty, clip
+from numpy import amax, median, percentile, empty, clip, fmax
 
-def extract(peak, image, expansion=1):
+def extract(peak, image, expansion=1, excludes=()):
     scale, *pos = peak
     scale = round(int(scale) * expansion)
     roi = (slice(None),) + tuple(slice(p - scale, p + scale) for p in pos)
     return image[roi]
+
+def excludeFrames(image, exclude=()):
+    from numpy import arange, zeros
+    import operator as op
+
+    idxs = arange(len(image))
+    excluded = map(lambda ex: (idxs >= ex.start) & (idxs < ex.end), exclude)
+    excluded = reduce(op.or_, excluded, zeros(len(image), dtype='bool'))
+    return image[~excluded]
 
 def peakEnclosed(peak, shape, expansion=1):
     scale, *pos = peak
@@ -54,6 +63,17 @@ def tiffConcat(*series):
         result[s] = img
     return result
 
+class Range:
+    def __init__(self, start, end=None):
+        if end is None:
+            end = value + 1
+        self.start = int(start)
+        self.end = int(end)
+
+    @classmethod
+    def fromString(cls, string):
+        return cls(*string.split('-'))
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from sys import stdout
@@ -71,24 +91,22 @@ if __name__ == '__main__':
                         help="The threshold value for the LOG blob detection.")
     parser.add_argument("--expansion", type=float, default=1,
                         help="The amount to expand detected points by.")
+    parser.add_argument("--exclude", type=Range.fromString, nargs='*', default=(),
+                        help="Any frames to exclude from the extracted sequence")
 
     args = parser.parse_args()
     p = Pool()
 
     raw = tiffConcat(*(tif.series[0] for tif in args.images))
+    raw = excludeFrames(raw, exclude=args.exclude)
     background = percentile(raw, 15.0, axis=0)
+    proj = reduce(fmax, rollingMedian(raw, 3, pool=p)) / background
 
-    image = empty((len(raw) - 2,) + raw.shape[1:], dtype='float32')
-    for i, frame in enumerate(rollingMedian(raw, 3, pool=p)):
-        image[i] = frame / background
-    del raw
-
-    proj = amax(image, axis=0)
     peaks = findBlobs(proj, scales=range(*args.spot_size),
-                        threshold=args.threshold, max_overlap=args.max_overlap)
+                      threshold=args.threshold, max_overlap=args.max_overlap)
 
     peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
-    rois = map(partial(extract, image=image, expansion=args.expansion), peaks)
+    rois = map(partial(extract, image=raw, expansion=args.expansion), peaks)
 
     for roi in rois:
         dump(roi, stdout.buffer, protocol=HIGHEST_PROTOCOL)

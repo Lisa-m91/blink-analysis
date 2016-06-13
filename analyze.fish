@@ -10,6 +10,21 @@ for dataset in $datasets;
 		set infiles (find $video -name "*.tif" | sort -V)
 		set ds (basename $video | grep -Eo "DS[0-9]+")
 		set outfile $outdir/$ds.pickle
-		./extract.py --expansion=2 $infiles > $outdir/$ds.pickle
+		set -e exclude
+		switch $dataset
+		case "160507_EH(646)_532_Trolox/EH646"
+			switch $ds
+			case DS1
+				set exclude 8500-9100
+			case DS2
+				set exclude 0-200
+			end
+		case "160507_EH(646)_532_Trolox/EH"
+			switch $ds
+			case DS4
+				set exclude 0-5000 6500-8000 8100-10001
+			end
+		end
+		./extract.py --expansion=2 $infiles --exclude $exclude > $outdir/$ds.pickle
 	end;
 end;
