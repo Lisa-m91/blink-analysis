@@ -124,7 +124,6 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     from pathlib import Path
     import sys
-    import csv
 
     from tifffile import imread
 
@@ -138,15 +137,25 @@ if __name__ == '__main__':
                         help="Plot the extracted points on a maximum intensity projection.")
     parser.add_argument("--scale", nargs="*", type=float,
                        help="The scale for the points along each axis.")
+    parser.add_argument("--format", choices={"csv", "pickle"}, default="csv",
+                        help="The output format (for stdout)")
 
     args = parser.parse_args()
 
     image = imread(str(args.image)).astype('float32')
     scale = asarray(args.scale) if args.scale else ones(image.ndim)
     blobs = findBlobs(image, range(*args.size), args.threshold)
-    writer = csv.writer(sys.stdout, delimiter=' ')
-    for blob in blobs:
-        writer.writerow(blob[1:][::-1] * scale)
+    if args.format == "csv":
+        import csv
+
+        writer = csv.writer(sys.stdout, delimiter=' ')
+        for blob in blobs:
+            writer.writerow(blob[1:][::-1] * scale)
+    elif args.format == "pickle":
+        from pickle import dump, HIGHEST_PROTOCOL
+
+        dump(blobs[:, 1:][::-1] * scale, sys.stdout.buffer, protocol=HIGHEST_PROTOCOL)
+
     if args.plot:
         import matplotlib.pyplot as plt
         from numpy import amax
