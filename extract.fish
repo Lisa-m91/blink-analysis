@@ -25,6 +25,6 @@ for dataset in $datasets;
 				set exclude 0-5000 6500-8000 8100-10001
 			end
 		end
-		./extract.py --expansion=2 $infiles --exclude $exclude > $outdir/$ds.pickle
+		./extract.py $infiles --exclude $exclude > $outdir/$ds.pickle
 	end;
 end;

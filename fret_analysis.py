@@ -48,7 +48,7 @@ if __name__ == "__main__":
             ds_stats = defaultdict(list)
             with datafile.open("rb") as f:
                 for roi in loadAll(f):
-                    trace = amax(roi, axis=(1, 2))
+                    trace = mean(roi, axis=(1, 2))
                     on = (trace > args.threshold)
 
                     background = mean(roi[~on])

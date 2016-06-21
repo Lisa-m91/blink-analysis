@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import amax, amin, concatenate, pad
+from numpy import amax, amin, mean, concatenate, pad
 from random import sample, seed
 
 def loadAll(f):
@@ -55,14 +55,16 @@ if __name__ == "__main__":
     for roi_path in args.rois:
         with roi_path.open("rb") as f:
             rois.extend(loadAll(f))
-    traces = list(map(partial(amax, axis=(1, 2)), rois))
+    traces = list(map(partial(mean, axis=(1, 2)), rois))
 
     fig = plt.figure(figsize=(8, 12))
     sample_idxs = list(sample(range(len(rois)), args.ntraces))
     sample_rois  = list(map(rois.__getitem__, sample_idxs))
     sample_traces = list(map(traces.__getitem__, sample_idxs))
-    vmin = min(map(amin, sample_traces))
-    vmax = max(map(amax, sample_traces))
+    roi_vmin = min(map(amin, sample_rois))
+    roi_vmax = max(map(amax, sample_rois))
+    trace_vmin = min(map(amin, sample_traces))
+    trace_vmax = max(map(amax, sample_traces))
     plt_indices = range(1, len(sample_idxs) * 2, 2)
     for i, roi, trace in zip(plt_indices, sample_rois, sample_traces):
         on = trace > args.threshold
@@ -78,7 +80,7 @@ if __name__ == "__main__":
         ax.set_xlabel("frame")
         ax.add_collection(lc)
         ax.set_xlim(0, len(trace))
-        ax.set_ylim(vmin, vmax)
+        ax.set_ylim(trace_vmin, trace_vmax)
         ax.axhline(y=args.threshold)
 
         ax = fig.add_subplot(plt_indices.stop, 1, i+1)
@@ -88,7 +90,7 @@ if __name__ == "__main__":
                 for i in range(0, len(roi), rowsize)]
         show = concatenate([pad(row, [(0, 0), (0, framesize[1] * rowsize - row.shape[1])],
                                 mode='constant', constant_values=0) for row in rows])
-        ax.imshow(show, vmax=vmax, vmin=vmin,
+        ax.imshow(show, vmax=roi_vmax, vmin=roi_vmin,
                   cmap=get_cmap('gray'), interpolation="nearest")
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
