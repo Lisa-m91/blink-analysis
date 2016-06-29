@@ -161,6 +161,7 @@ if __name__ == '__main__':
         from numpy import amax
 
         proj = amax(image, axis=tuple(range(image.ndim - 2)))
-        plt.imshow(proj)
-        plt.scatter(blobs[:, -1], blobs[:, -2])
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(proj, cmap="gray", interpolation="nearest")
+        ax.scatter(blobs[:, -1], blobs[:, -2], color="red", marker="+")
         plt.show()
