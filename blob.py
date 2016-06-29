@@ -35,15 +35,18 @@ def gaussianPsfHat(shape, sigmas, dtype='float'):
     return output
 
 # Circular gradient. Add more padding methods?
-def gradient(data, axis):
+def gradient(data, axis, backward=False):
     from numpy import roll
-    return data - roll(data, 1, axis)
+    if backward:
+        return data - roll(data, -1, axis)
+    else:
+        return roll(data, 1, axis) - data
 
 def div(*data):
     return sum(gradient(d, axis) for axis, d in enumerate(data))
 
 def laplacianOperator(data):
-    return div(*(gradient(data, a) for a in range(data.ndim)))
+    return div(*(gradient(data, a, backward=True) for a in range(data.ndim)))
 
 def localMinima(data, threshold):
     from numpy import ones, roll, nonzero, transpose
