@@ -8,7 +8,7 @@ from blob import findBlobs
 
 from numpy import amax, median, percentile, empty, clip, fmax
 
-def extract(peak, image, expansion=1, excludes=()):
+def extract(peak, image, expansion=1):
     scale, *pos = peak
     scale = round(int(scale) * expansion)
     roi = (slice(None),) + tuple(slice(p - scale, p + scale + 1) for p in pos)
