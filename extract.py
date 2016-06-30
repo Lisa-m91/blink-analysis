@@ -18,10 +18,18 @@ def excludeFrames(image, exclude=()):
     from numpy import arange, zeros
     import operator as op
 
-    idxs = arange(len(image))
-    excluded = map(lambda ex: (idxs >= ex.start) & (idxs < ex.end), exclude)
-    excluded = reduce(op.or_, excluded, zeros(len(image), dtype='bool'))
-    return image[~excluded]
+    try:
+        nframes = len(image)
+    except TypeError:
+        # Iterable
+        return (frame for i, frame in enumerate(image)
+                if not any(i in ex for ex in exclude))
+    else:
+        # Array
+        idxs = arange(nframes)
+        excluded = map(lambda ex: (idxs >= ex.start) & (idxs < ex.end), exclude)
+        excluded = reduce(op.or_, excluded, zeros(len(image), dtype='bool'))
+        return image[~excluded]
 
 def peakEnclosed(peak, shape, expansion=1):
     scale, *pos = peak
@@ -91,6 +99,9 @@ class Range:
     def fromString(cls, string):
         return cls(*string.split('-'))
 
+    def __contains__(self, i):
+        return self.start <= i < self.end
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from sys import stdout
@@ -124,7 +135,9 @@ if __name__ == '__main__':
         background = percentile(raw, 15.0, axis=0)
         proj = reduce(fmax, rollingMedian(raw, 3, pool=p)) / background
     else:
-        proj = reduce(fmax, rollingMedian(tiffChain(*series), 3, pool=p))
+        raw = tiffChain(*series)
+        raw = excludeFrames(raw, exclude=args.exclude)
+        proj = reduce(fmax, rollingMedian(raw, 3, pool=p))
 
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.threshold, max_overlap=args.max_overlap)
