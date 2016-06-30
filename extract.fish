@@ -30,3 +30,18 @@ for dataset in $datasets;
 		./extract.py $infiles --normalize --exclude $exclude > $outdir/$ds.pickle
 	end;
 end;
+
+set datasets "EH(JF646)_561_2mMTrol/EHJF646_NormalLinker_WithTrolox" "EH(JF646)_561_2mMTrol/EH Normal Linker_WithTrolox"
+
+for dataset in $datasets;
+	set outdir $out_prefix/(echo $dataset | sed "s@/@_@g")
+	mkdir -p $outdir
+	for video in $in_prefix/$dataset/*;
+		# Use find as sometimes nested by date
+		set infiles (find $video -name "*.tif" | sort -V)
+		set ds (basename $video | grep -Eo "DS[0-9]+")
+		set outfile $outdir/$ds.pickle
+
+		./extract.py $infiles > $outdir/$ds.pickle
+	end;
+end;
