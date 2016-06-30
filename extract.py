@@ -11,7 +11,7 @@ from numpy import amax, median, percentile, empty, clip, fmax
 def extract(peak, image, expansion=1, excludes=()):
     scale, *pos = peak
     scale = round(int(scale) * expansion)
-    roi = (slice(None),) + tuple(slice(p - scale, p + scale) for p in pos)
+    roi = (slice(None),) + tuple(slice(p - scale, p + scale + 1) for p in pos)
     return image[roi]
 
 def excludeFrames(image, exclude=()):
