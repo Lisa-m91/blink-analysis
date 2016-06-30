@@ -11,6 +11,7 @@ for dataset in $datasets;
 		set ds (basename $video | grep -Eo "DS[0-9]+")
 		set outfile $outdir/$ds.pickle
 		set -e exclude
+
 		switch $dataset
 		case "160507_EH(646)_532_Trolox/EH646"
 			switch $ds
@@ -25,6 +26,7 @@ for dataset in $datasets;
 				set exclude 0-5000 6500-8000 8100-10001
 			end
 		end
-		./extract.py $infiles --exclude $exclude > $outdir/$ds.pickle
+
+		./extract.py $infiles --normalize --exclude $exclude > $outdir/$ds.pickle
 	end;
 end;
