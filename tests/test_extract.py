@@ -1,4 +1,5 @@
 from unittest import TestCase
+from numpy import arange, array
 
 class TestRollingMedian(TestCase):
     def test_iterable(self):
@@ -15,6 +16,35 @@ class TestExcludeFrames(TestCase):
         data = iter(range(100, 120))
         expected = [100] + list(range(104, 108)) + list(range(110, 120))
         self.assertEqual(list(excludeFrames(data, excludes)), expected)
+
+class TextExtractAll(TestCase):
+    offsets = 100 * arange(1, 4)[:, None]
+
+    def setUp(self):
+        from tempfile import TemporaryFile
+        from tifffile import imsave
+
+        data = arange(10) + self.offsets
+        self.tifffile = TemporaryFile()
+        imsave(self.tifffile, data)
+        self.tifffile.seek(0)
+
+    def tearDown(self):
+        self.tifffile.close()
+
+    def test_iterable(self):
+        from extract import extractAll
+        from tifffile import TiffFile
+
+        series = [TiffFile(self.tifffile).series[0]]
+
+        peaks = array([[1, 3], [0, 4], [2, 6]])
+        expected = [arange(2, 5) + self.offsets,
+                    arange(4, 5) + self.offsets,
+                    arange(4, 9) + self.offsets,]
+
+        for trial, expected in zip(extractAll(peaks, series), expected):
+            self.assertTrue((trial == expected).all())
 
 if __name__ == "__main__":
     import unittest

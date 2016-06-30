@@ -14,6 +14,24 @@ def extract(peak, image, expansion=1):
     roi = (slice(None),) + tuple(slice(p - scale, p + scale + 1) for p in pos)
     return image[roi]
 
+def extractAll(peaks, series, expansion=1):
+    from numpy import empty, around, array
+
+    dtype = series[0].dtype
+    nframes = sum(s.shape[0] for s in series)
+
+    peaks = array(peaks)
+    scales, poss = peaks[:, 0], peaks[:, 1:]
+    ndim = poss.shape[1]
+    scales = around(scales * expansion).astype('int')
+
+    shapes = map(lambda s: (nframes,) + (s * 2 + 1,) * ndim, scales)
+    rois = list(map(partial(empty, dtype=dtype), shapes))
+    for i, frame in enumerate(tiffChain(*series)):
+        for roi, region in zip(rois, map(partial(extract, image=frame[None, ...]), peaks)):
+            roi[i] = region
+    return rois
+
 def excludeFrames(image, exclude=()):
     from numpy import arange, zeros
     import operator as op
@@ -127,7 +145,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     p = Pool()
 
-    series = (tif.series[0] for tif in args.images)
+    series = [tif.series[0] for tif in args.images]
 
     if args.normalize:
         raw = tiffConcat(*series)
@@ -141,9 +159,12 @@ if __name__ == '__main__':
 
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.threshold, max_overlap=args.max_overlap)
-
     peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
-    rois = map(partial(extract, image=raw, expansion=args.expansion), peaks)
+
+    if args.normalize:
+        rois = map(partial(extract, image=raw, expansion=args.expansion), peaks)
+    else:
+        rois = extractAll(list(peaks), series, expansion=args.expansion)
 
     for roi in rois:
         dump(roi, stdout.buffer, protocol=HIGHEST_PROTOCOL)
