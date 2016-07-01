@@ -145,6 +145,8 @@ if __name__ == '__main__':
                         help="Any frames to exclude from the extracted sequence")
     parser.add_argument("--normalize", action="store_true",
                         help="Normalize for per-pixel percentile (for hot spots)")
+    parser.add_argument("--plot", action="store_true",
+                        help="Plot the picked spots on the projection.")
 
     args = parser.parse_args()
     p = Pool()
@@ -165,6 +167,15 @@ if __name__ == '__main__':
                       threshold=args.threshold, max_overlap=args.max_overlap)
     peaks = peaks[peakEnclosed(peaks, shape=proj.shape, expansion=args.expansion)]
 
+    if args.plot:
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(proj, cmap="gray")
+        ax.scatter(*peaks.T[1:][::-1], marker="+", color="red")
+        ax.set_xticks([])
+        ax.set_yticks([])
+
     if args.normalize:
         rois = map(partial(extract, image=raw, expansion=args.expansion), peaks)
     else:
@@ -172,3 +183,7 @@ if __name__ == '__main__':
 
     for roi in rois:
         dump(roi, stdout.buffer, protocol=HIGHEST_PROTOCOL)
+
+    if args.plot:
+        fig.tight_layout()
+        plt.show()
