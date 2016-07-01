@@ -46,6 +46,20 @@ class TextExtractAll(TestCase):
         for trial, expected in zip(extractAll(peaks, series), expected):
             self.assertTrue((trial == expected).all())
 
+class TestPeakEnclosed(TestCase):
+    def test_simple(self):
+        from extract import peakEnclosed
+        shape = (5, 10)
+        peaks = array([[0, 0, 0],
+                       [1, 0, 0],
+                       [1, 1, 1],
+                       [0, 4, 9],
+                       [0, 5, 10],
+                       [1, 4, 9],
+                       [1, 3, 8],])
+        expected = array([True, False, True, True, False, False, True])
+        self.assertTrue((peakEnclosed(peaks, shape) == expected).all())
+
 if __name__ == "__main__":
     import unittest
     unittest.main()

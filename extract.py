@@ -49,11 +49,15 @@ def excludeFrames(image, exclude=()):
         excluded = reduce(op.or_, excluded, zeros(len(image), dtype='bool'))
         return image[~excluded]
 
-def peakEnclosed(peak, shape, expansion=1):
-    scale, *pos = peak
-    scale = scale * expansion
-    return (all(scale <= p for p in pos) and
-            all(scale < (s - p) for s, p in zip(shape, pos)))
+def peakEnclosed(peaks, shape, expansion=1):
+    from numpy import asarray
+
+    shape = asarray(shape)
+
+    scales, poss = peaks[:, 0:1], peaks[:, 1:]
+    scales = scales * expansion
+    return ((scales <= poss).all(axis=-1) &
+            (scales < (shape - poss)).all(axis=-1))
 
 def rollingMedian(data, width, pool=None):
     try:
@@ -159,7 +163,7 @@ if __name__ == '__main__':
 
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.threshold, max_overlap=args.max_overlap)
-    peaks = filter(partial(peakEnclosed, shape=proj.shape, expansion=args.expansion), peaks)
+    peaks = peaks[peakEnclosed(peaks, shape=proj.shape, expansion=args.expansion)]
 
     if args.normalize:
         rois = map(partial(extract, image=raw, expansion=args.expansion), peaks)
