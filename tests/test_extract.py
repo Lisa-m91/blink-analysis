@@ -17,6 +17,14 @@ class TestExcludeFrames(TestCase):
         expected = [100] + list(range(104, 108)) + list(range(110, 120))
         self.assertEqual(list(excludeFrames(data, excludes)), expected)
 
+    def test_array(self):
+        from extract import excludeFrames, Range
+
+        excludes = [Range(1, 4), Range(8, 10)]
+        data = array(range(100, 120))
+        expected = array([100] + list(range(104, 108)) + list(range(110, 120)))
+        self.assertTrue((excludeFrames(data, excludes) == expected).all())
+
 class TextExtractAll(TestCase):
     offsets = 100 * arange(1, 4)[:, None]
 
