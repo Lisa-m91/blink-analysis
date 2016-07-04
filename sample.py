@@ -33,8 +33,6 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Analyze single-particle traces.")
     parser.add_argument("rois", nargs='+', type=Path,
                         help="The pickled ROIs to process")
-    parser.add_argument("--threshold", type=float, default=2.0,
-                        help="The fold-increase over background necessary for a spot to be on.")
     parser.add_argument("--ntraces", type=int, default=5,
                         help="The number of (randomly chosen) traces to display.")
     parser.add_argument("--output", type=str, required=False,
@@ -67,7 +65,8 @@ if __name__ == "__main__":
     trace_vmax = max(map(amax, sample_traces))
     plt_indices = range(1, len(sample_idxs) * 2, 2)
     for i, roi, trace in zip(plt_indices, sample_rois, sample_traces):
-        on = trace > args.threshold
+        threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
+        on = trace > threshold
 
         cmap = ListedColormap(['r', 'b'])
         norm = BoundaryNorm([-float('inf'), 0.5, float('inf')], cmap.N)

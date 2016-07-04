@@ -29,8 +29,6 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Analyze single-particle traces.")
     parser.add_argument("--experiment", nargs='+', type=str, action="append",
                         help="The pickled ROIs to process")
-    parser.add_argument("--threshold", type=float, default=2.0,
-                        help="The fold-increase over background necessary for a spot to be on.")
     parser.add_argument("--output", type=str, required=False,
                         help="The base name for saving data.")
 
@@ -49,7 +47,8 @@ if __name__ == "__main__":
             with datafile.open("rb") as f:
                 for roi in loadAll(f):
                     trace = mean(roi, axis=(1, 2))
-                    on = (trace > args.threshold)
+                    threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
+                    on = trace > threshold
 
                     background = mean(roi[~on])
                     # FIXME: Use raw intensity or intensity/background?
