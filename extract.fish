@@ -27,7 +27,7 @@ for dataset in $datasets;
 			end
 		end
 
-		./extract.py $infiles --normalize --exclude $exclude > $outdir/$ds.pickle
+		./extract.py $infiles --spot-size 2 5 --threshold 0.1 --normalize --exclude $exclude > $outdir/$ds.pickle
 	end;
 end;
 
@@ -42,6 +42,6 @@ for dataset in $datasets;
 		set ds (basename $video | grep -Eo "DS[0-9]+")
 		set outfile $outdir/$ds.pickle
 
-		./extract.py $infiles > $outdir/$ds.pickle
+    ./extract.py $infiles --spot-size 2 5 --threshold 50 > $outdir/$ds.pickle
 	end;
 end;
