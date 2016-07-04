@@ -42,6 +42,15 @@ for dataset in $datasets;
 		set ds (basename $video | grep -Eo "DS[0-9]+")
 		set outfile $outdir/$ds.pickle
 
+    switch $dataset
+    case "EH(JF646)_561_2mMTrol/EHJF646_NormalLinker_WithTrolox"
+      switch $ds
+      case DS2
+        # Has y-axis drift
+        continue
+      end
+    end
+
     ./extract.py $infiles --spot-size 2 5 --threshold 50 > $outdir/$ds.pickle
 	end;
 end;
