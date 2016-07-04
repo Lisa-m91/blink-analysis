@@ -19,6 +19,15 @@ def groupWith(a, b):
     for key, group in groupby(zip(b, a), lambda x: x[0]):
         yield key, map(lambda x: x[1], group)
 
+def roundMean(mean, sigma):
+    from math import log10, floor
+
+    digits = int(floor(log10(abs(sigma))))
+
+    mean = round(mean, -digits)
+    sigma = round(sigma, -digits)
+    return mean, sigma
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from pathlib import Path
@@ -85,6 +94,7 @@ if __name__ == "__main__":
             for title, stat in sorted(exp_stats.items()):
                 grand_mean = mean(list(chain.from_iterable(stat)))
                 variation = std(list(map(mean, stat)))
+                grand_mean, variation = roundMean(grand_mean, variation)
                 print("{}: μ = {}, σ = {}".format(title, grand_mean, variation))
             print()
 
