@@ -95,13 +95,19 @@ if __name__ == "__main__":
     for ax, title in zip(axes, titles):
         ax.set_title(title)
 
-        data = []
-        for name in stats:
-            data.append(list(chain.from_iterable(stats[name][title])))
+        grand_means, variations, data = [], [], []
+        for name, exp_stats in stats.items():
+            grand_means.append(mean(list(chain.from_iterable(exp_stats[title]))))
+            variations.append(std(list(map(mean, exp_stats[title]))))
+            data.append(list(chain.from_iterable(exp_stats[title])))
 
         bound = percentile(list(chain.from_iterable(data)), 95)
         bins = linspace(0, bound, min(bound, 20))
-        ax.hist(data, bins, normed=True, label=stats)
+        _, _, patches = ax.hist(data, bins, normed=True, label=stats)
+        for grand_mean, variation, patch in zip(grand_means, variations, patches):
+            ax.axvline(grand_mean, color=patch[0].get_facecolor())
+            ax.axvline(grand_mean - variation, color=patch[0].get_facecolor(), linestyle='dashed')
+            ax.axvline(grand_mean + variation, color=patch[0].get_facecolor(), linestyle='dashed')
         ax.legend()
 
     if args.output is not None:
