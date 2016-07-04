@@ -78,9 +78,9 @@ if __name__ == "__main__":
         ax.set_ylabel("max. intensity")
         ax.set_xlabel("frame")
         ax.add_collection(lc)
-        ax.set_xlim(0, len(trace))
+        ax.set_xlim(-0.01 * len(trace), len(trace) * 1.01)
         ax.set_ylim(trace_vmin, trace_vmax)
-        ax.axhline(y=args.threshold)
+        ax.axhline(y=threshold)
 
         ax = fig.add_subplot(plt_indices.stop, 1, i+1)
         rowsize = 400
@@ -91,6 +91,8 @@ if __name__ == "__main__":
                                 mode='constant', constant_values=0) for row in rows])
         ax.imshow(show, vmax=roi_vmax, vmin=roi_vmin,
                   cmap=get_cmap('gray'), interpolation="nearest")
+        ax.set_ylim(show.shape[0] + 2, -7)
+        ax.set_xlim(-4, show.shape[1] + 4)
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
@@ -98,4 +100,5 @@ if __name__ == "__main__":
         fig.tight_layout()
         fig.savefig("{}_traces.png".format(args.output))
     else:
+        fig.tight_layout()
         plt.show()
