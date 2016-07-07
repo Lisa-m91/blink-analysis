@@ -54,3 +54,27 @@ for dataset in $datasets;
     ./extract.py $infiles --spot-size 2 5 --threshold 50 > $outdir/$ds.pickle
 	end;
 end;
+
+set datasets "EH(JF646)_2mMTrol_PowerDep/EH" "EH(JF646)_2mMTrol_PowerDep/EH646"
+set powers 1.0 0.6 0.0
+for dataset in $datasets
+  for power in $powers
+    set outdir $out_prefix/(echo $dataset | sed "s@/@_@g")_ND{$power}
+    mkdir -p $outdir
+    switch $power
+    case 1.0
+      set threshold 50
+    case 0.6
+      set threshold 50
+    case 0.0
+      set threshold 100
+    end;
+    for video in $in_prefix/$dataset/ND{$power}/*
+      set infiles (find $video -name "*.tif" | sort -V)
+      set ds (basename $video | grep -Eo "DS[0-9]+")
+      set outfile $outdir/$ds.pickle
+
+      ./extract.py $infiles --spot-size 2 3 --threshold $threshold > $outdir/$ds.pickle
+    end;
+  end;
+end;
