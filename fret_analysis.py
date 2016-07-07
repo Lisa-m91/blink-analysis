@@ -40,6 +40,8 @@ if __name__ == "__main__":
                         help="The pickled ROIs to process")
     parser.add_argument("--output", type=str, required=False,
                         help="The base name for saving data.")
+    parser.add_argument("--bin", type=int, default=1,
+                        help="Number of frames to bin.")
 
     args = parser.parse_args()
 
@@ -55,6 +57,8 @@ if __name__ == "__main__":
             ds_stats = defaultdict(list)
             with datafile.open("rb") as f:
                 for roi in loadAll(f):
+                    end = len(roi) // args.bin * args.bin
+                    roi = sum(map(lambda start: roi[start:end:args.bin], range(args.bin)))
                     trace = mean(roi, axis=(1, 2))
                     threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
                     on = trace > threshold

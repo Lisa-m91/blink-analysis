@@ -39,6 +39,8 @@ if __name__ == "__main__":
                         help="The base name for saving data.")
     parser.add_argument("--seed", type=int, default=4,
                         help="The seed for random processed (e.g. selecting sample traces)")
+    parser.add_argument("--bin", type=int, default=1,
+                        help="Number of frames to bin.")
 
     args = parser.parse_args()
 
@@ -52,7 +54,10 @@ if __name__ == "__main__":
     rois = []
     for roi_path in args.rois:
         with roi_path.open("rb") as f:
-            rois.extend(loadAll(f))
+            for roi in loadAll(f):
+                end = len(roi) // args.bin * args.bin
+                roi = sum(map(lambda start: roi[start:end:args.bin], range(args.bin)))
+                rois.append(roi)
     traces = list(map(partial(mean, axis=(1, 2)), rois))
 
     fig = plt.figure(figsize=(8, 12))
