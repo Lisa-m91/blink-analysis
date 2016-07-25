@@ -74,7 +74,29 @@ for dataset in $datasets
       set ds (basename $video | grep -Eo "DS[0-9]+")
       set outfile $outdir/$ds.pickle
 
-      ./extract.py $infiles --spot-size 2 3 --threshold $threshold > $outdir/$ds.pickle
+      ./extract.py $infiles --spot-size 1 3 --threshold $threshold > $outdir/$ds.pickle
+    end;
+  end;
+end;
+
+set datasets "EosHalo(JF646)_PowerDep/WithTrolox/EosHalo" "EosHalo(JF646)_PowerDep/WithTrolox/EosHaloJF646"
+set powers 1.0 1.5
+for dataset in $datasets
+  for power in $powers
+    set outdir $out_prefix/(echo $dataset | sed "s@/@_@g")_ND{$power}
+    mkdir -p $outdir
+    for video in $in_prefix/$dataset/ND{$power}/*
+      set infiles (find $video -name "*.tif" | sort -V)
+      set ds (basename $video | grep -Eo "DS[0-9]+")
+      set outfile $outdir/$ds.pickle
+      switch $power
+      case 1.5
+        set threshold 40
+      case 1.0
+        set threshold 50
+      end;
+
+      ./extract.py $infiles --spot-size 1 3 --threshold $threshold > $outdir/$ds.pickle
     end;
   end;
 end;
