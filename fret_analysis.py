@@ -22,6 +22,8 @@ def groupWith(a, b):
 def roundMean(mean, sigma):
     from math import log10, floor
 
+    if sigma == 0:
+        return mean, sigma
     digits = int(floor(log10(abs(sigma))))
 
     mean = round(mean, -digits)
