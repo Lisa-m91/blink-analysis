@@ -100,3 +100,13 @@ for dataset in $datasets
     end;
   end;
 end;
+
+set datasets "160713_EHJF646TroloxOpt/TrolSol_1/EH_5mMTrol_500ms_DS1_incubated" "160713_EHJF646TroloxOpt/TrolSol_1/EH646_5mMTrol_500ms_DS1_incubated"
+for dataset in $datasets
+  set outdir $out_prefix/(echo $dataset | sed "s@/@_@g")
+  mkdir -p $outdir
+  set infiles $in_prefix/$dataset/*.tif
+  set outfile $outdir/DS.pickle
+
+  ./extract.py $infiles --spot-size 1 3 --threshold 120 > $outfile
+end;
