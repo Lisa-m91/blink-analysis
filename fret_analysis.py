@@ -102,6 +102,7 @@ if __name__ == "__main__":
                 variation = std(list(map(mean, stat)))
                 grand_mean, variation = roundMean(grand_mean, variation)
                 print("{}: μ = {}, σ = {}".format(title, grand_mean, variation))
+            print("N = {}".format(sum(map(len, exp_stats['on times']))))
             print()
 
     titles = ["photons/frame", "photons/blink", "# of photons", "blink times",
