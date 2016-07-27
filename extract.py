@@ -147,6 +147,8 @@ if __name__ == '__main__':
                         help="Normalize for per-pixel percentile (for hot spots)")
     parser.add_argument("--plot", action="store_true",
                         help="Plot the picked spots on the projection.")
+    parser.add_argument("--filter-length", type=int, default=3,
+                        help="The number of frames to median-filter before projection")
 
     args = parser.parse_args()
     p = Pool()
@@ -161,7 +163,7 @@ if __name__ == '__main__':
     else:
         raw = tiffChain(*series)
         raw = excludeFrames(raw, exclude=args.exclude)
-        proj = reduce(fmax, rollingMedian(raw, 3, pool=p))
+        proj = reduce(fmax, rollingMedian(raw, args.filter_length, pool=p))
 
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.threshold, max_overlap=args.max_overlap)
