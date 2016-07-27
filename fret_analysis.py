@@ -82,8 +82,6 @@ if __name__ == "__main__":
             for stat, v in ds_stats.items():
                 stats[name][stat].append(v)
 
-    fig = plt.figure(figsize=(8, 12))
-
     if args.output is not None:
         for name, exp_stats in stats.items():
             with open("{}_{}.csv".format(args.output, name), 'w', newline='') as f:
@@ -107,9 +105,8 @@ if __name__ == "__main__":
 
     titles = ["photons/frame", "photons/blink", "# of photons", "blink times",
               "on times", "# of blinks",]
-    axes = map(partial(fig.add_subplot, len(titles) // 2, 2),
-               range(1, len(titles) + 1))
-    for ax, title in zip(axes, titles):
+    fig, axes = plt.subplots(len(titles) // 2, 2, figsize=(8, 12))
+    for ax, title in zip(chain.from_iterable(axes), titles):
         ax.set_title(title)
 
         grand_means, variations, data = [], [], []
