@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import amax, amin, sum as asum, mean, std, percentile, clip, linspace
+from numpy import (amax, amin, sum as asum, mean, std, percentile, clip,
+                   linspace, array, arange, reshape)
 from collections import defaultdict
 
 def loadAll(f):
@@ -123,6 +124,18 @@ if __name__ == "__main__":
             ax.axvline(grand_mean - variation, color=patch[0].get_facecolor(), linestyle='dashed')
             ax.axvline(grand_mean + variation, color=patch[0].get_facecolor(), linestyle='dashed')
         ax.legend()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    ax.set_title("Survival Curve")
+    ax.set_ylabel("% Remaining")
+    ax.set_yscale("log")
+    ax.set_xlabel("Lifetime")
+    for experiment_name, stat in stats.items():
+        on_times = array(stat["on times"]).reshape(-1)
+        xs = arange(0, on_times.max() + 1)
+        surviving = asum(reshape(on_times, (-1, 1)) >= reshape(xs, (1, -1)), axis=0)
+        ax.plot(surviving / len(on_times) * 100, label=experiment_name)
+    ax.legend()
 
     if args.output is not None:
         fig.tight_layout()
