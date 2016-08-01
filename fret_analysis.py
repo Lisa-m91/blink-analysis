@@ -3,8 +3,10 @@ from itertools import chain
 from functools import partial
 from numpy import (amax, amin, sum as asum, mean, std, percentile, clip,
                    linspace, array, arange, reshape)
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from math import inf
+
+Summary = namedtuple("Summary", ["mean", "std_dev"])
 
 def loadAll(f):
     from pickle import load
@@ -53,6 +55,10 @@ def calculateStats(roi, on):
     stats["# of blinks"].append(len(photons_by_blink))
     return stats
 
+def summarize(stat):
+    means = list(map(mean, stat))
+    return Summary(mean(means), std(means))
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from pathlib import Path
@@ -99,18 +105,15 @@ if __name__ == "__main__":
                 writer = csv.DictWriter(f, fieldnames=("name", "mean", "standard deviation"))
                 writer.writeheader()
                 for title, stat in sorted(exp_stats.items()):
-                    grand_mean = mean(list(chain.from_iterable(stat)))
-                    variation = std(list(map(mean, stat)))
-                    writer.writerow({"name": title, "mean": grand_mean,
-                                     "standard deviation": variation})
+                    stat = summarize(stat)
+                    writer.writerow({"name": title, "mean": stat.mean,
+                                     "standard deviation": stat.std_dev})
     else:
         for name, exp_stats in stats.items():
             print(name)
             for title, stat in sorted(exp_stats.items()):
-                grand_mean = mean(list(chain.from_iterable(stat)))
-                variation = std(list(map(mean, stat)))
-                grand_mean, variation = roundMean(grand_mean, variation)
-                print("{}: μ = {}, σ = {}".format(title, grand_mean, variation))
+                stat = summarize(stat)
+                print("{}: μ = {}, σ = {}".format(title, *roundMean(stat.mean, stat.std_dev)))
             print("N = {}".format(sum(map(len, exp_stats['on times']))))
             print()
 
