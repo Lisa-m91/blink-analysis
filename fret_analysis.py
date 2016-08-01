@@ -31,6 +31,10 @@ def roundMean(mean, sigma):
     sigma = round(sigma, -digits)
     return mean, sigma
 
+def bin(roi, width):
+    end = len(roi) // args.bin * args.bin
+    return sum(map(lambda start: roi[start:end:args.bin], range(args.bin)))
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from pathlib import Path
@@ -47,6 +51,7 @@ if __name__ == "__main__":
                         help="Number of frames to bin.")
 
     args = parser.parse_args()
+    bin = partial(bin, width=args.bin)
 
     if args.output is not None:
         matplotlib.use('agg')
@@ -59,9 +64,7 @@ if __name__ == "__main__":
         for datafile in map(Path, experiment[1:]):
             ds_stats = defaultdict(list)
             with datafile.open("rb") as f:
-                for roi in loadAll(f):
-                    end = len(roi) // args.bin * args.bin
-                    roi = sum(map(lambda start: roi[start:end:args.bin], range(args.bin)))
+                for roi in map(bin, loadAll(f)):
                     trace = mean(roi, axis=(1, 2))
                     threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
                     on = trace > threshold
