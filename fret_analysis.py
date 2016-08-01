@@ -4,6 +4,7 @@ from functools import partial
 from numpy import (amax, amin, sum as asum, mean, std, percentile, clip,
                    linspace, array, arange, reshape)
 from collections import defaultdict
+from math import inf
 
 def loadAll(f):
     from pickle import load
@@ -34,6 +35,23 @@ def roundMean(mean, sigma):
 def bin(roi, width):
     end = len(roi) // args.bin * args.bin
     return sum(map(lambda start: roi[start:end:args.bin], range(args.bin)))
+
+def calculateStats(roi, on):
+    stats = defaultdict(list)
+
+    background = mean(trace[~on])
+    signal = clip(roi - background, a_min=0, a_max=inf)
+    blinks = groupWith(signal, on)
+    on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
+
+    photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
+    stats["photons/frame"].extend(chain.from_iterable(photons_by_blink))
+    stats["photons/blink"].extend(map(sum, photons_by_blink))
+    stats["# of photons"].append(sum(map(sum, photons_by_blink)))
+    stats["blink times"].extend(map(len, photons_by_blink))
+    stats["on times"].append(sum(map(len, photons_by_blink)))
+    stats["# of blinks"].append(len(photons_by_blink))
+    return stats
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -69,19 +87,8 @@ if __name__ == "__main__":
                     threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
                     on = trace > threshold
 
-                    background = mean(roi[~on])
-                    # FIXME: Use raw intensity or intensity/background?
-                    signal = clip(roi - background, a_min=0, a_max=float('inf'))
-                    blinks = groupWith(signal, on)
-                    on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
-
-                    photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-                    ds_stats["photons/frame"].extend(chain.from_iterable(photons_by_blink))
-                    ds_stats["photons/blink"].extend(map(sum, photons_by_blink))
-                    ds_stats["# of photons"].append(sum(map(sum, photons_by_blink)))
-                    ds_stats["blink times"].extend(map(len, photons_by_blink))
-                    ds_stats["on times"].append(sum(map(len, photons_by_blink)))
-                    ds_stats["# of blinks"].append(len(photons_by_blink))
+                    for stat, v in calculateStats(roi, on).items():
+                        ds_stats[stat].extend(v)
 
             for stat, v in ds_stats.items():
                 stats[name][stat].append(v)
