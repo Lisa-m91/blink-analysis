@@ -32,14 +32,14 @@ def roundMean(mean, sigma):
     sigma = round(sigma, -digits)
     return mean, sigma
 
-def bin(roi, width):
-    end = len(roi) // args.bin * args.bin
-    return sum(map(lambda start: roi[start:end:args.bin], range(args.bin)))
+def bin(roi, width=1):
+    end = len(roi) // width * width
+    return sum(map(lambda start: roi[start:end:width], range(width)))
 
 def calculateStats(roi, on):
     stats = defaultdict(list)
 
-    background = mean(trace[~on])
+    background = mean(roi[~on])
     signal = clip(roi - background, a_min=0, a_max=inf)
     blinks = groupWith(signal, on)
     on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
