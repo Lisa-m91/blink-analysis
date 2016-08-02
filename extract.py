@@ -77,14 +77,6 @@ def rollingMedian(data, width, pool=None):
     else:
         return pool.imap(partial(median, axis=0), slices)
 
-def arrangeSubplots(n):
-    from math import ceil, sqrt
-
-    nrows = ceil(sqrt(n))
-    ncols = ceil(n / nrows)
-
-    return nrows, ncols
-
 def tiffChain(*series):
     from itertools import chain
     from tifffile.tifffile import TiffPageSeries
