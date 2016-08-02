@@ -97,6 +97,10 @@ class Range:
     def __contains__(self, i):
         return self.start <= i < self.end
 
+def project(*series, exclude=(), pool=None, filter_length=1):
+    raw = excludeFrames(tiffChain(*series), exclude)
+    return reduce(fmax, rollingMedian(raw, filter_length, pool=pool))
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from sys import stdout
@@ -126,10 +130,7 @@ if __name__ == '__main__':
 
     series = [tif.series[0] for tif in args.images]
 
-    raw = tiffChain(*series)
-    raw = excludeFrames(raw, exclude=args.exclude)
-    proj = reduce(fmax, rollingMedian(raw, args.filter_length, pool=p))
-
+    proj = project(*series, exclude=args.exclude, pool=p, filter_length=args.filter_length)
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.threshold, max_overlap=args.max_overlap)
     peaks = peaks[peakEnclosed(peaks, shape=proj.shape, expansion=args.expansion)]
