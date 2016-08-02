@@ -85,25 +85,6 @@ def arrangeSubplots(n):
 
     return nrows, ncols
 
-def tiffConcat(*series):
-    from itertools import accumulate, tee, islice, starmap, chain
-    from numpy import empty
-    from tifffile.tifffile import TiffPageSeries
-
-    lengths = list(map(lambda img: img.shape[0], series))
-    offsets = accumulate(chain((0,), lengths))
-
-    shape = (sum(lengths),) + series[0].shape[1:]
-    result = empty(shape, dtype=series[0].dtype)
-
-    offsets, ends = tee(offsets, 2)
-    ends = islice(ends, 1, None)
-    slices = starmap(slice, zip(offsets, ends))
-
-    for img, s in zip(map(TiffPageSeries.asarray, series), slices):
-        result[s] = img
-    return result
-
 def tiffChain(*series):
     from itertools import chain
     from tifffile.tifffile import TiffPageSeries
@@ -143,8 +124,6 @@ if __name__ == '__main__':
                         help="The amount to expand detected points by.")
     parser.add_argument("--exclude", type=Range.fromString, nargs='*', default=(),
                         help="Any frames to exclude from the extracted sequence")
-    parser.add_argument("--normalize", action="store_true",
-                        help="Normalize for per-pixel percentile (for hot spots)")
     parser.add_argument("--plot", action="store_true",
                         help="Plot the picked spots on the projection.")
     parser.add_argument("--filter-length", type=int, default=3,
@@ -155,15 +134,9 @@ if __name__ == '__main__':
 
     series = [tif.series[0] for tif in args.images]
 
-    if args.normalize:
-        raw = tiffConcat(*series)
-        raw = excludeFrames(raw, exclude=args.exclude)
-        background = percentile(raw, 15.0, axis=0)
-        proj = reduce(fmax, rollingMedian(raw, 3, pool=p)) / background
-    else:
-        raw = tiffChain(*series)
-        raw = excludeFrames(raw, exclude=args.exclude)
-        proj = reduce(fmax, rollingMedian(raw, args.filter_length, pool=p))
+    raw = tiffChain(*series)
+    raw = excludeFrames(raw, exclude=args.exclude)
+    proj = reduce(fmax, rollingMedian(raw, args.filter_length, pool=p))
 
     peaks = findBlobs(proj, scales=range(*args.spot_size),
                       threshold=args.threshold, max_overlap=args.max_overlap)
@@ -178,10 +151,7 @@ if __name__ == '__main__':
         ax.set_xticks([])
         ax.set_yticks([])
 
-    if args.normalize:
-        rois = map(partial(extract, image=raw, expansion=args.expansion), peaks)
-    else:
-        rois = extractAll(list(peaks), series, expansion=args.expansion)
+    rois = extractAll(list(peaks), series, expansion=args.expansion)
 
     for roi in rois:
         dump(roi, stdout.buffer, protocol=HIGHEST_PROTOCOL)
