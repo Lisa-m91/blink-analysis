@@ -146,7 +146,7 @@ if __name__ == '__main__':
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots(1, 1)
-        ax.imshow(proj, cmap="gray", interpolation="nearest")
+        ax.imshow(proj, cmap="gray", interpolation="nearest", vmax=percentile(proj, 99.99))
         ax.scatter(*peaks.T[1:][::-1], marker="+", color="red")
         ax.set_xticks([])
         ax.set_yticks([])
