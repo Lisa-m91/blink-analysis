@@ -59,6 +59,9 @@ def calculateStats(roi, on):
     stats["total_blinks"].append(len(photons_by_blink))
     return stats
 
+def calculateThreshold(trace):
+    return (amin(trace) + (amax(trace) - amin(trace)) / 2)
+
 def analyze(args):
     bin_trace = partial(bin, width=args.bin)
     stats = defaultdict(list)
@@ -67,7 +70,7 @@ def analyze(args):
         with roi_file.open("rb") as f:
             for roi in map(bin_trace, loadAll(f)):
                 trace = mean(roi, axis=(1, 2))
-                threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
+                threshold = calculateThreshold(trace)
                 on = trace > threshold
 
                 for stat, vs in calculateStats(roi, on).items():

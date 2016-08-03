@@ -3,6 +3,7 @@ from itertools import chain
 from functools import partial
 from numpy import amax, amin, mean, concatenate, pad
 from random import sample, seed
+from fret_analysis import calculateThreshold
 
 def loadAll(f):
     from pickle import load
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     trace_vmax = max(map(amax, sample_traces))
     plt_indices = range(1, len(sample_idxs) * 2, 2)
     for i, roi, trace in zip(plt_indices, sample_rois, sample_traces):
-        threshold = (amin(trace) + (amax(trace) - amin(trace)) / 2)
+        threshold = calculateThreshold(trace)
         on = trace > threshold
 
         cmap = ListedColormap(['r', 'b'])
