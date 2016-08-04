@@ -146,7 +146,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     image = imread(str(args.image)).astype('float32')
-    scale = asarray(args.scale) if args.scale else ones(image.ndim)
+    scale = asarray(args.scale) if args.scale else ones(image.ndim, dtype='int')
     blobs = findBlobs(image, range(*args.size), args.threshold)
     if args.format == "csv":
         import csv
@@ -156,8 +156,10 @@ if __name__ == '__main__':
             writer.writerow(blob[1:][::-1] * scale)
     elif args.format == "pickle":
         from pickle import dump, HIGHEST_PROTOCOL
+        from functools import partial
+        dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 
-        dump(blobs[:, 1:][::-1] * scale, sys.stdout.buffer, protocol=HIGHEST_PROTOCOL)
+        dump(blobs[:, 1:] * scale, sys.stdout.buffer)
 
     if args.plot:
         import matplotlib.pyplot as plt
