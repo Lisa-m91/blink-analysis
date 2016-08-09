@@ -51,13 +51,13 @@ def calculateStats(roi, on):
     on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
 
     photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-    stats["frame_photons"].extend(chain.from_iterable(photons_by_blink))
-    stats["blink_photons"].extend(map(sum, photons_by_blink))
-    stats["total_photons"].append(sum(map(sum, photons_by_blink)))
-    stats["blink_times"].extend(map(len, photons_by_blink))
-    stats["total_times"].append(sum(map(len, photons_by_blink)))
-    stats["total_blinks"].append(len(photons_by_blink))
-    return stats
+    stats["frame_photons"] = list(chain.from_iterable(photons_by_blink))
+    stats["blink_photons"] = list(map(sum, photons_by_blink))
+    stats["total_photons"] = sum(map(sum, photons_by_blink))
+    stats["blink_times"] = list((map(len, photons_by_blink)))
+    stats["total_times"] = sum(map(len, photons_by_blink))
+    stats["total_blinks"] = len(photons_by_blink)
+    return dict(stats)
 
 def calculateThreshold(trace):
     return (amin(trace) + (amax(trace) - amin(trace)) / 2)
@@ -65,22 +65,16 @@ def calculateThreshold(trace):
 def analyze(args):
     bin_trace = partial(bin, width=args.bin)
     stats = defaultdict(list)
-    for roi_file in args.ROIs:
-        ds_stats = defaultdict(list)
-        with roi_file.open("rb") as f:
-            for roi in map(bin_trace, loadAll(f)):
-                trace = mean(roi, axis=(1, 2))
-                threshold = calculateThreshold(trace)
-                on = trace > threshold
+    with args.ROIs.open("rb") as f:
+        for roi in map(bin_trace, loadAll(f)):
+            trace = mean(roi, axis=(1, 2))
+            threshold = calculateThreshold(trace)
+            on = trace > threshold
 
-                for stat, vs in calculateStats(roi, on).items():
-                    ds_stats[stat].extend(vs)
-        for stat, vs in ds_stats.items():
-            stats[stat].append(vs)
+            for stat, vs in calculateStats(roi, on).items():
+                stats[stat].append(vs)
     with args.outfile.open("wb") as f:
-        with args.metadata.open("r") as mf:
-            dump(yaml.load(mf), f)
-        dump(stats, f)
+        dump(dict(stats), f)
 
 def plot(args):
     if args.outdir is not None:
@@ -158,9 +152,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Analyze single-particle traces.")
     subparsers = parser.add_subparsers()
     parser_analyze = subparsers.add_parser('analyze', help="Generate statistics from a ROI")
-    parser_analyze.add_argument("metadata", type=Path,
-                                help="The metadata .yaml file")
-    parser_analyze.add_argument("ROIs", type=Path, nargs='+',
+    parser_analyze.add_argument("ROIs", type=Path,
                                 help="The pickled ROIs to process")
     parser_analyze.add_argument("outfile", type=Path,
                                 help="The file to write stats to")
