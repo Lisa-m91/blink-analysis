@@ -7,12 +7,11 @@ def makeRegion(peak, size):
     return tuple(map(slice, starts, ends))
 
 def makeConsecutiveSlices(lengths):
-    from itertools import islice, chain, tee, accumulate
+    from itertools import chain, tee, accumulate
 
     ends = accumulate(lengths)
     starts, ends = tee(ends, 2)
-    starts = chain((0,), islice(starts, 1, None))
-    ends = chain(ends, (None,))
+    starts = chain((0,), starts)
     return map(slice, starts, ends)
 
 def extractAll(peaks, series, size=1):
@@ -27,7 +26,7 @@ def extractAll(peaks, series, size=1):
 
     shape = (nframes,) + (size * 2 + 1,) * ndim
     rois = empty((len(peaks),) + shape, dtype=dtype)
-    regions = map(partial(makeRegion, size=size), peaks)
+    regions = list(map(partial(makeRegion, size=size), peaks))
 
     data = map(TiffPageSeries.asarray, series)
     slices = makeConsecutiveSlices(s.shape[0] for s in series)
