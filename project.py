@@ -22,7 +22,7 @@ def tiffChain(series):
 
 def multiReduce(functions, iterable):
     def reducer(accs, value):
-        return map(lambda f, a: f(a, value), functions, accs)
+        return tuple(map(lambda f, a: f(a, value), functions, accs))
     return reduce(reducer, iterable)
 
 class Counter:
