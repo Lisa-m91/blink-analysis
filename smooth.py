@@ -5,14 +5,18 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import morphology
 
 def ball(r, ndim):
-    from math import ceil, pi, inf
-    from operator import sub
-    from functools import reduce, partial
+    return ellipse((r,) * (ndim + 1))
 
-    size = ceil(2*r)
-    xs = np.ogrid[(slice(-size/2, size/2, (size * 1j)),) * ndim]
-    xs = map(lambda x: np.power(x, 2), xs)
-    ys = np.sqrt(reduce(sub, xs, r ** 2).clip(0))
+def ellipse(rs):
+    from functools import reduce
+    from operator import sub
+
+    z, *rs = rs
+    rs = np.asarray(rs)
+    size = np.ceil(2 * rs)
+    xs = np.ogrid[tuple(map(slice, -size/2, size/2, size * 1j))]
+    xs = map(lambda x, r: np.power(x, 2) / r, xs, rs ** 2)
+    ys = np.sqrt((reduce(sub, xs, 1) * z ** 2).clip(0))
     return ys - ys.max(), ys > 0
 
 def smooth(a, radius, invert=False):
