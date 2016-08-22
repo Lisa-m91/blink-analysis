@@ -35,12 +35,6 @@ def extractAll(peaks, series, size=1):
             roi[s] = frames[(slice(None),) + region]
     return rois
 
-def peakEnclosed(peaks, shape, size=1):
-    from numpy import asarray
-
-    shape = asarray(shape)
-    return ((size <= peaks).all(axis=-1) & (size < (shape - peaks)).all(axis=-1))
-
 if __name__ == '__main__':
     from argparse import ArgumentParser
     from pathlib import Path
@@ -64,7 +58,6 @@ if __name__ == '__main__':
 
     with args.peaks.open("rb") as f:
         peaks = load(f)
-    peaks = peaks[peakEnclosed(peaks, shape=image_shape, size=2)]
     rois = extractAll(peaks, list(series), size=args.size)
 
     for roi in rois:
