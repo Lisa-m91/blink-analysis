@@ -21,9 +21,12 @@ def tiffChain(series):
     return chain.from_iterable(map(TiffPageSeries.asarray, series))
 
 def multiReduce(functions, iterable):
-    def reducer(accs, value):
-        return tuple(map(lambda f, a: f(a, value), functions, accs))
-    return reduce(reducer, iterable)
+    from functools import reduce
+    from itertools import tee
+
+    def reducer(accs, values):
+        return tuple(map(lambda f, a, v: f(a, v), functions, accs, values))
+    return reduce(reducer, zip(*tee(iterable, len(functions))))
 
 class Counter:
     def __init__(self, value=0):
