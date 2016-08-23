@@ -41,7 +41,7 @@ if __name__ == "__main__":
     from numpy import fmax
     from operator import add
     from multiprocessing import Pool
-    from itertools import chain
+    from itertools import chain, islice
     from functools import reduce
     from enum import Enum
 
@@ -52,11 +52,16 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("tifs", nargs='+', type=TiffFile)
+    parser.add_argument("--range", type=str, nargs=2, default=("start", "end"),
+                        help="The frame to start the projection")
     parser.add_argument("--method", nargs=2, action='append', type=str, required=True)
     parser.add_argument("--filter-size", type=int, default=1,
                         help="The number of frames to running-median filter")
 
     args = parser.parse_args()
+    start, end = args.range
+    start = None if start == "start" else int(start)
+    end = None if end == "end" else int(end)
 
     methods = tuple(Projection[m[0]] for m in args.method)
     functions = (Counter(),) + tuple(m.value for m in methods)
@@ -65,7 +70,7 @@ if __name__ == "__main__":
     pool = Pool()
     with ExitStack() as stack:
         for tif in args.tifs: stack.enter_context(tif)
-        frames = tiffChain(chain.from_iterable(tif.series for tif in args.tifs))
+        frames = islice(tiffChain(chain.from_iterable(tif.series for tif in args.tifs)), start, end)
         count, *projections = multiReduce(functions, rollingMedian(frames, args.filter_size, pool=pool))
 
     for method, projection, outfile in zip(methods, projections, outfiles):
