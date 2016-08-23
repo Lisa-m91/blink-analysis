@@ -42,7 +42,7 @@ if __name__ == "__main__":
     from operator import add
     from multiprocessing import Pool
     from itertools import chain, islice
-    from functools import reduce
+    from functools import reduce, partial
     from enum import Enum
 
     class Projection(Enum):
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         max = fmax
 
     parser = ArgumentParser()
-    parser.add_argument("tifs", nargs='+', type=TiffFile)
+    parser.add_argument("tifs", nargs='+', type=partial(TiffFile, multifile=False))
     parser.add_argument("--range", type=str, nargs=2, default=("start", "end"),
                         help="The frame to start the projection")
     parser.add_argument("--method", nargs=2, action='append', type=str, required=True)

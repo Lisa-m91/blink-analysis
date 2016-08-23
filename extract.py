@@ -42,13 +42,15 @@ if __name__ == '__main__':
     from pickle import load, dump, HIGHEST_PROTOCOL
     dump = partial(dump, protocol=HIGHEST_PROTOCOL)
     from sys import stdout
+    from functools import partial
 
     from tifffile import TiffFile
 
     parser = ArgumentParser(description="Extract points from a video.")
 
     parser.add_argument("peaks", type=Path, help="The locations of peaks to pick")
-    parser.add_argument("images", nargs='+', type=TiffFile, help="The video to process.")
+    parser.add_argument("images", nargs='+', type=partial(TiffFile, multifile=False),
+                        help="The video to process.")
     parser.add_argument("--size", type=int, default=2,
                         help="The radius of the spot to extract.")
 

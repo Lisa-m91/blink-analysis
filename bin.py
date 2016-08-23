@@ -31,7 +31,7 @@ if __name__ == "__main__":
     import yaml
 
     parser = ArgumentParser(description="Bin adjacent frames of a TIF video.")
-    parser.add_argument("tifs", nargs='+', type=TiffFile)
+    parser.add_argument("tifs", nargs='+', type=partial(TiffFile, multifile=False))
     parser.add_argument("-n", type=int, required=True)
     parser.add_argument("outfile", type=partial(TiffWriter, bigtiff=True))
     parser.add_argument("--metadata", nargs=2, type=Path,

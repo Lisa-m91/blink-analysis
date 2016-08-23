@@ -27,9 +27,10 @@ def smooth(a, radius, invert=False):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from tifffile import TiffFile, TiffWriter
+    from functools import partial
 
     parser = ArgumentParser(description="Background correct an image using the rolling-ball method")
-    parser.add_argument("tif", type=TiffFile)
+    parser.add_argument("tif", type=partial(TiffFile, multifile=False))
     parser.add_argument("outfile", type=TiffWriter)
     parser.add_argument("--radius", type=float, required=True)
     parser.add_argument("--invert", action="store_true")
