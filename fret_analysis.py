@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import (amax, amin, sum as asum, mean, std, percentile, clip,
-                   linspace, array, arange, reshape)
-from collections import defaultdict, namedtuple
+from numpy import (sum as asum, max as amax, min as amin, mean, clip, zeros)
 from math import inf
+from scipy.stats import ttest_ind
+from collections import defaultdict
 from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 import yaml
-
-Summary = namedtuple("Summary", ["mean", "std_dev"])
 
 def loadAll(f):
     while True:
@@ -23,17 +21,6 @@ def groupWith(a, b):
 
     for key, group in groupby(zip(b, a), lambda x: x[0]):
         yield key, map(lambda x: x[1], group)
-
-def roundMean(mean, sigma):
-    from math import log10, floor
-
-    if sigma == 0:
-        return mean, sigma
-    digits = int(floor(log10(abs(sigma))))
-
-    mean = round(mean, -digits)
-    sigma = round(sigma, -digits)
-    return mean, sigma
 
 def bin(roi, width=1):
     end = len(roi) // width * width
@@ -62,34 +49,29 @@ def calculateStats(roi, on):
 def calculateThreshold(trace):
     return (amin(trace) + (amax(trace) - amin(trace)) / 2)
 
-def analyze(args):
+def analyze(rois):
     bin_trace = partial(bin, width=args.bin)
     stats = defaultdict(list)
-    with args.ROIs.open("rb") as f:
-        for roi in map(bin_trace, loadAll(f)):
-            trace = mean(roi, axis=(1, 2))
-            threshold = calculateThreshold(trace)
-            on = trace > threshold
+    for roi in map(bin_trace, loadAll(f)):
+        trace = mean(roi, axis=(1, 2))
+        threshold = calculateThreshold(trace)
+        on = trace > threshold
 
-            for stat, vs in calculateStats(roi, on).items():
-                stats[stat].append(vs)
-    with args.outfile.open("wb") as f:
-        dump(dict(stats), f)
+        for stat, vs in calculateStats(roi, on).items():
+            stats[stat].append(vs)
+    return dict(stats)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from pathlib import Path
 
     parser = ArgumentParser(description="Analyze single-particle traces.")
-    subparsers = parser.add_subparsers()
-    parser_analyze = subparsers.add_parser('analyze', help="Generate statistics from a ROI")
-    parser_analyze.add_argument("ROIs", type=Path,
-                                help="The pickled ROIs to process")
-    parser_analyze.add_argument("outfile", type=Path,
-                                help="The file to write stats to")
-    parser_analyze.add_argument("--bin", type=int, default=1,
-                                help="Number of frames to bin.")
-    parser_analyze.set_defaults(func=analyze)
+    parser.add_argument("ROIs", type=Path, help="The pickled ROIs to process")
+    parser.add_argument("outfile", type=Path, help="The file to write stats to")
+    parser.add_argument("--bin", type=int, default=1, help="Number of frames to bin.")
 
     args = parser.parse_args()
-    args.func(args)
+    with args.ROIs.open("rb") as f:
+        stats = analyze(loadAll(f))
+    with args.outfile.open("wb") as f:
+        dump(stats, f)
