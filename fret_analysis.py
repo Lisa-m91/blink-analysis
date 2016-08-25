@@ -9,6 +9,8 @@ from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 import yaml
 
+from categorize import mask
+
 def loadAll(f):
     while True:
         try:
@@ -29,11 +31,9 @@ def bin(roi, width=1):
 stat_names = ["frame_photons", "blink_photons", "total_photons",
               "blink_times", "total_times", "total_blinks"]
 
-def calculateStats(roi, on):
+def calculateStats(signal, on):
     stats = {k: [] for k in stat_names}
 
-    background = mean(roi[~on])
-    signal = clip(roi - background, a_min=0, a_max=inf)
     blinks = groupWith(signal, on)
     on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
 
@@ -46,20 +46,18 @@ def calculateStats(roi, on):
     stats["total_blinks"] = len(photons_by_blink)
     return dict(stats)
 
-def calculateThreshold(trace):
-    return (amin(trace) + (amax(trace) - amin(trace)) / 2)
-
-def analyze(rois):
-    bin_trace = partial(bin, width=args.bin)
+def analyze(rois, ons):
     stats = defaultdict(list)
-    for roi in map(bin_trace, loadAll(f)):
-        trace = mean(roi, axis=(1, 2))
-        threshold = calculateThreshold(trace)
-        on = trace > threshold
+    for roi, on in zip(rois, ons):
+        if not on.any():
+            continue
+        signal = roi[:, mask]
+        background = roi[:, ~mask]
 
-        for stat, vs in calculateStats(roi, on).items():
+        signal = (signal - background.mean(axis=1, keepdims=True)).clip(min=0)
+        for stat, vs in calculateStats(signal, on).items():
             stats[stat].append(vs)
-    return dict(stats)
+    return stats
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -67,11 +65,12 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(description="Analyze single-particle traces.")
     parser.add_argument("ROIs", type=Path, help="The pickled ROIs to process")
+    parser.add_argument("onfile", type=Path, help="The pickled ROIs to process")
     parser.add_argument("outfile", type=Path, help="The file to write stats to")
     parser.add_argument("--bin", type=int, default=1, help="Number of frames to bin.")
 
     args = parser.parse_args()
-    with args.ROIs.open("rb") as f:
-        stats = analyze(loadAll(f))
+    with args.ROIs.open("rb") as roi_f, args.onfile.open("rb") as on_f:
+        stats = analyze(loadAll(roi_f), loadAll(on_f))
     with args.outfile.open("wb") as f:
         dump(stats, f)
