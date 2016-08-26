@@ -19,8 +19,12 @@ mask[(slice(2, -2),) * mask.ndim] = True
 def categorize(roi):
     signal = roi[:, mask]
     background = roi[:, ~mask]
-    return (ttest_ind(signal, background, axis=1, equal_var=False).pvalue
-            < (1 / len(roi)))
+    cutoff = 1 / len(roi)
+
+    different = ttest_ind(signal, background, axis=1, equal_var=False).pvalue < cutoff
+    higher = np.mean(signal, axis=1) > np.mean(background, axis=1)
+
+    return different & higher
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
