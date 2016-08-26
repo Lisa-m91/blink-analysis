@@ -47,7 +47,7 @@ def calculateStats(signal, on):
     return dict(stats)
 
 def analyze(rois, ons):
-    stats = defaultdict(list)
+    stats = {k: [] for k in stat_names}
     for roi, on in zip(rois, ons):
         if not on.any():
             continue
