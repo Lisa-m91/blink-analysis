@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import (sum as asum, max as amax, min as amin, mean, clip, zeros)
+from numpy import (sum as asum, mean, clip, zeros)
 from math import inf
 from scipy.stats import ttest_ind
 from collections import defaultdict
@@ -38,10 +38,10 @@ def calculateStats(signal, on):
     on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
 
     photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-    stats["frame_photons"] = list(chain.from_iterable(photons_by_blink))
-    stats["blink_photons"] = list(map(sum, photons_by_blink))
+    stats["frame_photons"] = mean(list(chain.from_iterable(photons_by_blink)))
+    stats["blink_photons"] = mean(list(map(sum, photons_by_blink)))
     stats["total_photons"] = sum(map(sum, photons_by_blink))
-    stats["blink_times"] = list((map(len, photons_by_blink)))
+    stats["blink_times"] = mean(list((map(len, photons_by_blink))))
     stats["total_times"] = sum(map(len, photons_by_blink))
     stats["total_blinks"] = len(photons_by_blink)
     return dict(stats)
