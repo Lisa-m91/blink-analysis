@@ -49,8 +49,6 @@ def calculateStats(signal, on):
 def analyze(rois, ons):
     stats = {k: [] for k in stat_names}
     for roi, on in zip(rois, ons):
-        if not on.any():
-            continue
         signal = roi[:, mask]
         background = roi[:, ~mask]
 
