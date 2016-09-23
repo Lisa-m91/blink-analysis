@@ -33,7 +33,6 @@ if __name__ == "__main__":
 
     with args.outfile.open("w") as f:
         writer = csv.writer(f)
-        headers = chain(coords[::-1], stats.keys())
-        writer.writerow(chain(coords[::-1], stats.keys()))
-        for peak, peak_stats in zip(peaks[:, ::-1], zip(*stats.values())):
+        writer.writerow(chain(coords[::-1], stat_names))
+        for peak, peak_stats in zip(peaks[:, ::-1], zip(*map(stats.__getitem__, stat_names))):
             writer.writerow(chain(peak, peak_stats))
