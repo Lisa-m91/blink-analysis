@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     with args.metadata[0].open("r") as infile:
         metadata = yaml.load(infile)
-    metadata["exposure"] *= args.n
+    metadata["binning"] = args.n
 
     with args.metadata[1].open("w") as outfile:
         yaml.dump(metadata, outfile, default_flow_style=False)
