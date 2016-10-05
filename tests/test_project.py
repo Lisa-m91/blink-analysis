@@ -1,5 +1,10 @@
 from project import *
 
+def test_rollingmedian():
+    data = iter(range(0, 10))
+    expected = list(range(1, 9))
+    assert list(rollingMedian(data, 3)) == expected
+
 def test_multireduce():
     assert multiReduce([min, max], range(20)) == (0, 19)
 
