@@ -32,6 +32,36 @@ class TextExtractAll(TiffTest):
         for trial, expected in zip_longest(extractAll(peaks, series), expected):
             np.testing.assert_equal(trial, expected)
 
+    def test_slice(self):
+        tif = TiffFile(self.tifffile)
+        series = list(chain(tif.series, tif.series))
+
+        peaks = np.array([[3], [4], [6]])
+        offsets = np.concatenate((self.offsets,)* 2)[1:5]
+        expected = [np.arange(2, 5) + offsets,
+                    np.arange(3, 6) + offsets,
+                    np.arange(5, 8) + offsets,]
+
+        for trial, expected in zip(extractAll(peaks, series, start=1, end=5), expected):
+            np.testing.assert_equal(trial, expected)
+
+class TestSlice(TiffTest):
+    def test_none(self):
+        tif = TiffFile(self.tifffile)
+        series = list(chain(tif.series, tif.series))
+
+        for series, sliced in zip_longest(series, sliceSeries(series)):
+            np.testing.assert_equal(series.asarray(), sliced)
+
+    def test_slice(self):
+        tif = TiffFile(self.tifffile)
+        series = list(chain(tif.series, tif.series))
+        expected = [series[0].asarray()[1:],
+                    series[1].asarray()[:2]]
+
+        for expected, sliced in zip_longest(expected, sliceSeries(series, 1, 5)):
+            np.testing.assert_equal(sliced, expected)
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
