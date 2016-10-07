@@ -14,15 +14,17 @@ def loadAll(f):
         except EOFError:
             break
 
-mask = np.zeros((9, 9), dtype='bool')
-mask[(slice(2, -2),) * mask.ndim] = True
+bg_mask = np.ones((9, 9), dtype='bool')
+bg_mask[(slice(2, -2),) * bg_mask.ndim] = False
+fg_mask = np.zeros((9, 9), dtype='bool')
+fg_mask[(slice(2, -2),) * fg_mask.ndim] = True
 
 def smooth(on, smoothing=1):
     return on | binary_closing(on, structure=np.ones(smoothing, dtype="bool"))
 
 def categorize(roi):
-    signal = roi[:, mask]
-    background = roi[:, ~mask]
+    signal = roi[:, fg_mask]
+    background = roi[:, bg_mask]
     cutoff = 1 / len(roi)
 
     different = ttest_ind(signal, background, axis=1, equal_var=False).pvalue < cutoff
