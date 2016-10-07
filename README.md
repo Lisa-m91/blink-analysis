@@ -30,8 +30,9 @@ files (`video_1.tif` and `video_2.tif`).
    ./project.py video_1.tif video_2.tif projection.tif
    ```
 
-2. The peaks are picked using the picking script from the `blob-detection`
-   repository. The most important parameter is the `threshold` value.
+2. The peaks are picked using the picking script from
+   the [blob detection][blob-detection] repository. The most important parameter
+   is the `threshold` value.
 
    The `edge` parameter should be set to (at least) the same as used for the
    extraction in step 3. This avoids the extracted ROI clipping against the edge
@@ -91,3 +92,4 @@ should be robust to low-frequency variation.
 [skimage-log]: http://scikit-image.org/docs/dev/auto_examples/plot_blob.html#laplacian-of-gaussian-log
 [pypi]: https://pypi.python.org/pypi
 [pip-install]: https://pip.pypa.io/en/stable/user_guide/#installing-packages
+[blob-detection]: https://github.com/TheLaueLab/blob-detection
