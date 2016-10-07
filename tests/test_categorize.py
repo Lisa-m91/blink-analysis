@@ -2,8 +2,13 @@ import numpy as np
 from categorize import *
 
 def test_smooth():
-    data = np.array([1, 0, 0, 1, 1, 0, 1], dtype='bool')
-    expected = np.array([1, 0, 0, 1, 1, 1, 1], dtype='bool')
+    data     = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0], dtype='bool')
+    expected = np.array([1, 0, 0, 1, 1, 1, 1, 0, 0], dtype='bool')
+    np.testing.assert_equal(smooth(data, 2), expected)
+
+def test_smooth_small_peak():
+    data     = np.array([0, 0, 1, 0, 0, 1, 0, 1, 0], dtype='bool')
+    expected = np.array([0, 0, 1, 0, 0, 1, 1, 1, 0], dtype='bool')
     np.testing.assert_equal(smooth(data, 2), expected)
 
 def test_smooth_passthrough():
