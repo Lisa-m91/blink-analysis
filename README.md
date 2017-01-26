@@ -24,10 +24,10 @@ own options to fine-tune behaviour, which can be described by passing the
 The following examples illustrate picking spots from a video split over 2 TIFF
 files (`video_1.tif` and `video_2.tif`).
 
-1. The video(s) are projected into a 2D image (`projection.tif`):
+1. The video(s) are maximum-intensity projected into a 2D image (`projection.tif`):
 
    ```
-   ./project.py video_1.tif video_2.tif projection.tif
+   ./project.py video_1.tif video_2.tif --method maximum projection.tif
    ```
 
 2. The peaks are picked using the picking script from
