@@ -1,5 +1,5 @@
 import numpy as np
-from categorize import *
+from blink_analysis.categorize import *
 
 def test_smooth():
     data     = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0], dtype='bool')

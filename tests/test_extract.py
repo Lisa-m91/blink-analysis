@@ -3,7 +3,7 @@ import numpy as np
 from itertools import chain, zip_longest
 
 from tifffile import TiffFile
-from extract import *
+from blink_analysis.extract import *
 
 class TiffTest(TestCase):
     offsets = 100 * np.arange(1, 4)[:, None]

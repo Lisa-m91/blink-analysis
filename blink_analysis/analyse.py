@@ -9,7 +9,7 @@ from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 import yaml
 
-from categorize import fg_mask, bg_mask
+from .categorize import fg_mask, bg_mask
 
 def loadAll(f):
     while True:
@@ -57,7 +57,8 @@ def analyze(rois, ons):
             stats[stat].append(vs)
     return stats
 
-if __name__ == "__main__":
+def main(args=None):
+    from sys import argv
     from argparse import ArgumentParser
     from pathlib import Path
 
@@ -66,9 +67,12 @@ if __name__ == "__main__":
     parser.add_argument("onfile", type=Path, help="The pickled ROIs to process")
     parser.add_argument("outfile", type=Path, help="The file to write stats to")
     parser.add_argument("--bin", type=int, default=1, help="Number of frames to bin.")
+    args = parser.parse_args(argv[1:] if args is None else args)
 
-    args = parser.parse_args()
     with args.ROIs.open("rb") as roi_f, args.onfile.open("rb") as on_f:
         stats = analyze(loadAll(roi_f), loadAll(on_f))
     with args.outfile.open("wb") as f:
         dump(stats, f)
+
+if __name__ == "__main__":
+    main()

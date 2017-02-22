@@ -6,7 +6,7 @@ data.
 # Installation
 
 No installation is required, this repository is just a group of self-contained
-scripts.
+scripts. If desired, the package can be installed with `./setup.py install`.
 
 ## Requirements
 
@@ -17,6 +17,9 @@ are available from [PyPI][pypi] and can be installed as described in the
 
 # Usage
 
+The scripts can be used directly, or, if installed with `setup.py`, with
+`blink_analysis <script> <options>`.
+
 A number of scripts are meant to be used in the following order. Each has it's
 own options to fine-tune behaviour, which can be described by passing the
 `--help` flag to the appropriate script.
@@ -24,10 +27,11 @@ own options to fine-tune behaviour, which can be described by passing the
 The following examples illustrate picking spots from a video split over 2 TIFF
 files (`video_1.tif` and `video_2.tif`).
 
-1. The video(s) are maximum-intensity projected into a 2D image (`projection.tif`):
+1. The video(s) are maximum-intensity projected into a 2D image
+   (`projection.tif`) using the [tiffutil][tiffutil] package:
 
    ```
-   ./project.py video_1.tif video_2.tif --method maximum projection.tif
+   tiffutil project --method max video_1.tif video_2.tif projection.tif
    ```
 
 2. The peaks are picked using the picking script from
@@ -39,21 +43,21 @@ files (`video_1.tif` and `video_2.tif`).
    of the frame.
    
    ```
-   ./blob.py --size 2 3 --edge 4 --format pickle --threshold 40 projection.tif > peaks.pickle
+   blob find --size 2 3 --edge 4 --format pickle --threshold 40 projection.tif > peaks.pickle
    ```
    
 3. The ROIs are extracted from the video. The ROIs will be of size
    `2 * size + 1`, centered on the peak.
 
    ```
-   ./extract.py --size 4 peaks.pickle video_1.tif, video_2.tif > rois.pickle
+   blink_analysis extract --size 4 peaks.pickle video_1.tif video_2.tif > rois.pickle
    ```
    
 4. The ROIs are categorized into on- and off-states. This simply compares the
    center of the ROI to the edge, on a frame-by-frame basis.
    
    ```
-   ./categorize.py rois.pickle on.pickle
+   blink_analysis categorize rois.pickle on.pickle
    ```
 
 5. The resulting traces are summarized. This extracts the following statistics
@@ -68,14 +72,14 @@ files (`video_1.tif` and `video_2.tif`).
    - total on-state time
 
    ```
-   ./fret_analysis.py rois.pickle on.pickle stats.pickle
+   blink_analysis analyse rois.pickle on.pickle stats.pickle
    ```
    
    The statistics can be converted to a human-readable CSV file with the
    `csvify.py` script.
    
    ```
-   ./csvify.py peaks.pickle stats.pickle stats.csv
+   blink_analysis csvify peaks.pickle stats.pickle stats.csv
    ```
 
 `smooth.py` is provided to perform background correction, should it be
@@ -93,3 +97,4 @@ should be robust to low-frequency variation.
 [pypi]: https://pypi.python.org/pypi
 [pip-install]: https://pip.pypa.io/en/stable/user_guide/#installing-packages
 [blob-detection]: https://github.com/TheLaueLab/blob-detection
+[tiffutil]: https://github.com/TheLaueLab/tiffutil

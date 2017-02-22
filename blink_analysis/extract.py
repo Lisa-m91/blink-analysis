@@ -52,14 +52,13 @@ def extractAll(peaks, series, size=1, start=0, end=None):
             roi[s] = frames[(slice(None),) + region]
     return rois
 
-if __name__ == '__main__':
+def main(args=None):
+    from sys import argv, stdout
     from argparse import ArgumentParser
     from pathlib import Path
     from itertools import chain
     from pickle import load, dump, HIGHEST_PROTOCOL
     dump = partial(dump, protocol=HIGHEST_PROTOCOL)
-    from sys import stdout
-    from functools import partial
 
     from tifffile import TiffFile
 
@@ -72,8 +71,8 @@ if __name__ == '__main__':
                         help="The radius of the spot to extract.")
     parser.add_argument("--range", type=str, nargs=2, default=("start", "end"),
                         help="The range of frames to extract.")
+    args = parser.parse_args(argv[1:] if args is None else args)
 
-    args = parser.parse_args()
     series = chain.from_iterable(tif.series for tif in args.images)
     image_shape = args.images[0].series[0].asarray().shape[1:]
 
@@ -87,3 +86,6 @@ if __name__ == '__main__':
 
     for roi in rois:
         dump(roi, stdout.buffer)
+
+if __name__ == '__main__':
+    main()

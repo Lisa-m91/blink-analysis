@@ -32,7 +32,8 @@ def categorize(roi):
 
     return different & higher
 
-if __name__ == "__main__":
+def main(args=None):
+    from sys import argv
     from argparse import ArgumentParser
     from pathlib import Path
 
@@ -43,9 +44,12 @@ if __name__ == "__main__":
                         help="The file to write on/off data to")
     parser.add_argument("--smoothing", type=int, default=1,
                         help="The number of 'off' frames required to end a blink")
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:] if args is None else args)
 
     with args.ROIs.open("rb") as roi_f, args.outfile.open("wb") as on_f:
         for on in map(partial(smooth, smoothing=args.smoothing),
                       map(categorize, loadAll(roi_f))):
             dump(on, on_f)
+
+if __name__ == "__main__":
+    main()

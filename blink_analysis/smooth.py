@@ -24,7 +24,8 @@ def smooth(a, radius, invert=False):
     structure, footprint = ball(radius, a.ndim)
     return function(a, structure=structure, footprint=footprint)
 
-if __name__ == "__main__":
+def main(args=None):
+    from sys import argv
     from argparse import ArgumentParser
     from tifffile import TiffFile, TiffWriter
     from functools import partial
@@ -34,10 +35,13 @@ if __name__ == "__main__":
     parser.add_argument("outfile", type=TiffWriter)
     parser.add_argument("--radius", type=float, required=True)
     parser.add_argument("--invert", action="store_true")
+    args = parser.parse_args(argv[1:] if args is None else args)
 
-    args = parser.parse_args()
     with args.tif:
         data = args.tif.asarray().astype('float32')
 
     with args.outfile:
         args.outfile.save(smooth(data, args.radius, args.invert).astype('float32'))
+
+if __name__ == "__main__":
+    main()
