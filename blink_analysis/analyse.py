@@ -9,7 +9,7 @@ from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 import yaml
 
-from .categorize import fg_mask, bg_mask
+from .categorize import masks
 
 def loadAll(f):
     while True:
@@ -49,6 +49,7 @@ def calculateStats(signal, on):
 def analyze(rois, ons):
     stats = {k: [] for k in stat_names}
     for roi, on in zip(rois, ons):
+        fg_mask, bg_mask = masks(roi.shape[1:])
         signal = roi[:, fg_mask]
         background = roi[:, bg_mask]
 

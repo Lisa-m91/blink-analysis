@@ -14,15 +14,21 @@ def loadAll(f):
         except EOFError:
             break
 
-bg_mask = np.ones((9, 9), dtype='bool')
-bg_mask[(slice(2, -2),) * bg_mask.ndim] = False
-fg_mask = np.zeros((9, 9), dtype='bool')
-fg_mask[(slice(2, -2),) * fg_mask.ndim] = True
+def masks(shape):
+    slices = tuple(slice(s//4, -(s//4)) for s in shape)
+
+    bg_mask = np.ones(shape, dtype='bool')
+    bg_mask[slices] = False
+    fg_mask = np.zeros(shape, dtype='bool')
+    fg_mask[slices] = True
+
+    return fg_mask, bg_mask
 
 def smooth(on, smoothing=1):
     return on | binary_closing(on, structure=np.ones(smoothing, dtype="bool"))
 
 def categorize(roi):
+    fg_mask, bg_mask = masks(roi.shape[1:])
     signal = roi[:, fg_mask]
     background = roi[:, bg_mask]
     cutoff = 1 / len(roi)
