@@ -43,14 +43,14 @@ files (`video_1.tif` and `video_2.tif`).
    of the frame.
    
    ```
-   blob find --size 2 3 --edge 4 --format pickle --threshold 40 projection.tif > peaks.pickle
+   blob find --size 2 3 --edge 4 --threshold 40 projection.tif > peaks.csv
    ```
    
 3. The ROIs are extracted from the video. The ROIs will be of size
    `2 * size + 1`, centered on the peak.
 
    ```
-   blink_analysis extract --size 4 peaks.pickle video_1.tif video_2.tif > rois.pickle
+   blink_analysis extract --size 4 peaks.csv video_1.tif video_2.tif > rois.pickle
    ```
    
 4. The ROIs are categorized into on- and off-states. This simply compares the
@@ -72,14 +72,7 @@ files (`video_1.tif` and `video_2.tif`).
    - total on-state time
 
    ```
-   blink_analysis analyse rois.pickle on.pickle stats.pickle
-   ```
-   
-   The statistics can be converted to a human-readable CSV file with the
-   `csvify.py` script.
-   
-   ```
-   blink_analysis csvify peaks.pickle stats.pickle stats.csv
+   blink_analysis analyse rois.pickle on.pickle > stats.csv
    ```
 
 `smooth.py` is provided to perform background correction, should it be

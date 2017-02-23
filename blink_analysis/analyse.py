@@ -59,21 +59,24 @@ def analyze(rois, ons):
     return stats
 
 def main(args=None):
-    from sys import argv
+    from sys import argv, stdout
     from argparse import ArgumentParser
     from pathlib import Path
+    import csv
 
     parser = ArgumentParser(description="Analyze single-particle traces.")
     parser.add_argument("ROIs", type=Path, help="The pickled ROIs to process")
     parser.add_argument("onfile", type=Path, help="The pickled ROIs to process")
-    parser.add_argument("outfile", type=Path, help="The file to write stats to")
     parser.add_argument("--bin", type=int, default=1, help="Number of frames to bin.")
     args = parser.parse_args(argv[1:] if args is None else args)
 
     with args.ROIs.open("rb") as roi_f, args.onfile.open("rb") as on_f:
         stats = analyze(loadAll(roi_f), loadAll(on_f))
-    with args.outfile.open("wb") as f:
-        dump(stats, f)
+
+    writer = csv.DictWriter(stdout, stats.keys())
+    writer.writeheader()
+    for row in zip(*stats.values()):
+        writer.writerow(dict(zip(stats.keys(), row)))
 
 if __name__ == "__main__":
     main()

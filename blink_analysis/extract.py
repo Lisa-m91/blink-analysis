@@ -59,6 +59,7 @@ def main(args=None):
     from itertools import chain
     from pickle import load, dump, HIGHEST_PROTOCOL
     dump = partial(dump, protocol=HIGHEST_PROTOCOL)
+    import csv
 
     from tifffile import TiffFile
 
@@ -76,8 +77,9 @@ def main(args=None):
     series = chain.from_iterable(tif.series for tif in args.images)
     image_shape = args.images[0].series[0].asarray().shape[1:]
 
-    with args.peaks.open("rb") as f:
-        peaks = load(f)
+    with args.peaks.open("r") as f:
+        reader = csv.reader(f)
+        peaks = list(map(list, map(partial(map, int), reader)))
 
     start, end = args.range
     start = 0 if start == "start" else int(start)
