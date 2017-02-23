@@ -31,16 +31,16 @@ files (`video_1.tif` and `video_2.tif`).
    (`projection.tif`) using the [tiffutil][tiffutil] package:
 
    ```
-   tiffutil project --method max video_1.tif video_2.tif projection.tif
+   tiffutil project --projection max video_1.tif video_2.tif projection.tif
    ```
 
 2. The peaks are picked using the picking script from
    the [blob detection][blob-detection] repository. The most important parameter
    is the `threshold` value.
 
-   The `edge` parameter should be set to (at least) the same as used for the
-   extraction in step 3. This avoids the extracted ROI clipping against the edge
-   of the frame.
+   The `edge` parameter should be set to (at least) the same size as used for
+   the extraction in step 3. This avoids the extracted ROI clipping against the
+   edge of the frame.
    
    ```
    blob find --size 2 3 --edge 4 --threshold 40 projection.tif > peaks.csv
