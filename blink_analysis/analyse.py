@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import (sum as asum, mean, clip, zeros)
-from math import inf
+from numpy import (sum as asum, mean, clip)
 from scipy.stats import ttest_ind
-from collections import defaultdict
-from pickle import load, dump, HIGHEST_PROTOCOL
-dump = partial(dump, protocol=HIGHEST_PROTOCOL)
-import yaml
+from pickle import load
 
 from .categorize import masks
 
