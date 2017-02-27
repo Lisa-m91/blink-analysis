@@ -45,3 +45,17 @@ def test_masks():
 
     for test, e in zip(masks((5, 5)), expected):
         np.testing.assert_equal(test, e)
+
+def test_image_grid():
+    data = np.arange(16).reshape((4, 2, 2))
+    expected = np.array([[ 0,  1,  4,  5],
+                         [ 2,  3,  6,  7],
+                         [ 8,  9, 12, 13],
+                         [10, 11, 14, 15]])
+    np.testing.assert_equal(image_grid(data, 2), expected)
+
+    expected = np.array([[ 0,  1,  4,  5],
+                         [ 2,  3,  6,  7],
+                         [ 8,  9,  0,  0],
+                         [10, 11,  0,  0]])
+    np.testing.assert_equal(image_grid(data[:3], 2), expected)

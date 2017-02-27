@@ -55,10 +55,16 @@ files (`video_1.tif` and `video_2.tif`).
    
 4. The ROIs are categorized into on- and off-states. This simply compares the
    center of the ROI to the edge, on a frame-by-frame basis.
-   
+
    ```
-   blink_analysis categorize rois.pickle on.pickle
+   blink_analysis categorize run rois.pickle on.pickle
    ```
+
+   a. The categorization can be plotted for inspection.
+
+      ```
+      blink_analysis categorize plot rois.pickle on.pickle
+      ```
 
 5. The resulting traces are summarized. This extracts the following statistics
    for each ROI:
