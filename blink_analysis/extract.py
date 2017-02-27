@@ -41,7 +41,7 @@ def extractAll(peaks, series, size=1, start=0, end=None):
 
     shape = (nframes,) + (size * 2 + 1,) * ndim
     rois = empty((len(peaks),) + shape, dtype=dtype)
-    regions = list(map(partial(makeRegion, size=size), peaks))
+    regions = list(map(partial(makeRegion, size=size), peaks[:, ::-1]))
 
     data = sliceSeries(series, start, end)
     data, lens = tee(data, 2)
