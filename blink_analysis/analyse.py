@@ -69,7 +69,7 @@ def main(args=None):
     with args.ROIs.open("rb") as roi_f, args.onfile.open("rb") as on_f:
         stats = analyze(loadAll(roi_f), loadAll(on_f))
 
-    writer = csv.DictWriter(stdout, stats.keys())
+    writer = csv.DictWriter(stdout, sorted(stats.keys()))
     writer.writeheader()
     for row in zip(*stats.values()):
         writer.writerow(dict(zip(stats.keys(), row)))
