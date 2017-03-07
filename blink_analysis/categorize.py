@@ -3,7 +3,7 @@ from itertools import chain
 from functools import partial
 import numpy as np
 from scipy.stats import ttest_ind
-from scipy.ndimage.morphology import binary_closing
+from scipy.ndimage.morphology import binary_closing, binary_opening
 from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 
@@ -25,7 +25,9 @@ def masks(shape):
     return fg_mask, bg_mask
 
 def smooth(on, smoothing=1):
-    return on | binary_closing(on, structure=np.ones(smoothing, dtype="bool"))
+    on = on | binary_closing(on, structure=np.ones(smoothing, dtype="bool"))
+    on = on & binary_opening(on, structure=np.ones(smoothing, dtype="bool"))
+    return on
 
 def categorize(roi):
     fg_mask, bg_mask = masks(roi.shape[1:])
