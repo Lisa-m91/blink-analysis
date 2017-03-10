@@ -4,16 +4,21 @@ from blink_analysis.categorize import *
 def test_smooth():
     data     = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0], dtype='bool')
     expected = np.array([0, 0, 0, 1, 1, 1, 1, 0, 0], dtype='bool')
-    np.testing.assert_equal(smooth(data, 2), expected)
+    np.testing.assert_equal(smooth(data, (2, 2)), expected)
 
 def test_smooth_small_peak():
     data     = np.array([0, 0, 1, 0, 0, 1, 0, 1, 0], dtype='bool')
     expected = np.array([0, 0, 0, 0, 0, 1, 1, 1, 0], dtype='bool')
-    np.testing.assert_equal(smooth(data, 2), expected)
+    np.testing.assert_equal(smooth(data, (2, 2)), expected)
 
 def test_smooth_passthrough():
     data = np.array([1, 0, 0, 1, 1, 0, 1], dtype='bool')
-    np.testing.assert_equal(smooth(data, 1), data)
+    np.testing.assert_equal(smooth(data, (1, 1)), data)
+
+def test_smooth_different():
+    data     = np.array([1, 0, 1, 0, 0, 1, 1, 0, 0], dtype='bool')
+    expected = np.array([1, 1, 1, 0, 0, 0, 0, 0, 0], dtype='bool')
+    np.testing.assert_equal(smooth(data, (2, 3)), expected)
 
 def test_categorize():
     data = np.zeros((4, 9, 9), dtype='float')

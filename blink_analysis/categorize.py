@@ -24,9 +24,9 @@ def masks(shape):
 
     return fg_mask, bg_mask
 
-def smooth(on, smoothing=1):
-    on = on | binary_closing(on, structure=np.ones(smoothing, dtype="bool"))
-    on = on & binary_opening(on, structure=np.ones(smoothing, dtype="bool"))
+def smooth(on, smoothing=(1, 1)):
+    on = on | binary_closing(on, structure=np.ones(smoothing[0], dtype="bool"))
+    on = on & binary_opening(on, structure=np.ones(smoothing[1], dtype="bool"))
     return on
 
 def categorize(roi):
@@ -98,8 +98,8 @@ def main(args=None):
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("ROIs", type=Path, help="The pickled ROIs to process")
     run_parser.add_argument("outfile", type=Path, help="The file to write on/off data to")
-    run_parser.add_argument("--smoothing", type=int, default=1,
-                            help="The number of 'off' frames required to end a blink")
+    run_parser.add_argument("--smoothing", nargs=2, type=int, default=(1, 1),
+                            help="The number of 'off'/'on' frames required to end/begin a blink")
     run_parser.set_defaults(func=run)
 
     plot_parser = subparsers.add_parser("plot")
