@@ -37,7 +37,10 @@ def extractAll(peaks, series, size=1, start=0, end=None):
     nframes = end - start
 
     peaks = array(peaks)
-    ndim = peaks.shape[1]
+    try:
+        ndim = peaks.shape[1]
+    except IndexError:
+        return array([], dtype=dtype)
 
     shape = (nframes,) + (size * 2 + 1,) * ndim
     rois = empty((len(peaks),) + shape, dtype=dtype)

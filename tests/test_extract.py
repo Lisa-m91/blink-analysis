@@ -21,6 +21,12 @@ class TiffTest(TestCase):
         self.tifffile.close()
 
 class TextExtractAll(TiffTest):
+    def test_empty(self):
+        series = [TiffFile(self.tifffile).series[0]]
+        peaks = np.array([])
+        expected = np.array([])
+        np.testing.assert_equal(extractAll(peaks, series), expected)
+
     def test_iterable(self):
         series = [TiffFile(self.tifffile).series[0]]
 
