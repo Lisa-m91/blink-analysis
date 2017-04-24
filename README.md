@@ -81,10 +81,10 @@ files (`video_1.tif` and `video_2.tif`).
    blink_analysis analyse rois.pickle on.pickle > stats.csv
    ```
 
-`smooth.py` is provided to perform background correction, should it be
-necessary. However, the methods used in the picking and categorization software
-should be robust to low-frequency variation.
-
+If background correction is necessary, [tiffutil][tiffutil] provides a `smooth`
+function that performs rolling-ball background correction. However, the methods
+used in the picking and categorization software should be robust to
+low-frequency variation.
 
 [python]: https://python.org
 [scipy]: https://scipy.org
