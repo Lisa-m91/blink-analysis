@@ -20,3 +20,31 @@ def test_main(tmpdir, capsys):
             dump(on, f)
 
     main([str(rois_f), str(ons_f)])
+
+
+def test_calculate_stats():
+    signal = np.array([
+        [[1, 1], [1, 2]],
+        [[1, 2], [2, 2]],
+        [[1, 5], [5, 2]], # 13
+        [[1, 5], [8, 2]], # 16
+        [[1, 1], [1, 2]],
+        [[1, 1], [1, 2]],
+        [[5, 9], [9, 2]],
+        [[1, 2], [0, 6]], # 9
+        [[1, 2], [1, 0]],
+        [[1, 2], [1, 2]],
+    ])
+
+    on = np.array([0, 0, 1, 1, 0, 0, 0, 1, 0, 0])
+    expected = {
+        'frame_photons': 38 / 3,
+        'blink_photons': 19,
+        'total_photons': 38,
+        'blink_times': 1.5,
+        'total_times': 3,
+        'total_blinks': 2,
+    }
+
+    assert calculateStats(signal, on) == expected
+    assert calculateStats(signal[:-2], on[:-2]) == expected
