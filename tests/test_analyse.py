@@ -36,7 +36,7 @@ def test_calculate_stats():
         [[1, 2], [1, 2]],
     ])
 
-    on = np.array([0, 0, 1, 1, 0, 0, 0, 1, 0, 0])
+    on = np.array([0, 0, 1, 1, 0, 0, 0, 1, 0, 0], dtype='bool')
     expected = {
         'frame_photons': 38 / 3,
         'blink_photons': 19,

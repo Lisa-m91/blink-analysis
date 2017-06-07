@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from itertools import chain
 from functools import partial
-from numpy import (sum as asum, mean, clip)
+import numpy as np
 from scipy.stats import ttest_ind
 from pickle import load
 
@@ -14,11 +14,13 @@ def loadAll(f):
         except EOFError:
             break
 
-def groupWith(a, b):
-    from itertools import groupby
-
-    for key, group in groupby(zip(b, a), lambda x: x[0]):
-        yield key, map(lambda x: x[1], group)
+def mean(iterable):
+    total = next(iterable)
+    ctr = 1
+    for i in iterable:
+        total += i
+        ctr += 1
+    return total / ctr
 
 def bin(roi, width=1):
     end = len(roi) // width * width
@@ -28,18 +30,21 @@ stat_names = ["frame_photons", "blink_photons", "total_photons",
               "blink_times", "total_times", "total_blinks"]
 
 def calculateStats(signal, on):
-    stats = {k: [] for k in stat_names}
+    stats = {}
 
-    blinks = groupWith(signal, on)
-    on_blinks = map(lambda x: x[1], filter(lambda x: x[0], blinks))
+    signal = signal.reshape(len(signal), -1)
+    blinks = np.split(signal, np.flatnonzero(np.diff(on)) + 1)
+    if on[0]:
+        on_blinks, off_blinks = blinks[::2], blinks[1::2]
+    else:
+        off_blinks, on_blinks = blinks[::2], blinks[1::2]
 
-    photons_by_blink = list(map(list, map(partial(map, asum), on_blinks)))
-    stats["frame_photons"] = mean(list(chain.from_iterable(photons_by_blink)))
-    stats["blink_photons"] = mean(list(map(sum, photons_by_blink)))
-    stats["total_photons"] = sum(map(sum, photons_by_blink))
-    stats["blink_times"] = mean(list((map(len, photons_by_blink))))
-    stats["total_times"] = sum(map(len, photons_by_blink))
-    stats["total_blinks"] = len(photons_by_blink)
+    stats["frame_photons"] = signal[on].sum(axis=1).mean()
+    stats["blink_photons"] = mean(map(np.sum, on_blinks))
+    stats["total_photons"] = signal[on].sum()
+    stats["blink_times"] = mean(map(len, on_blinks))
+    stats["total_times"] = on.sum()
+    stats["total_blinks"] = len(on_blinks)
     return dict(stats)
 
 def analyze(rois, ons):
