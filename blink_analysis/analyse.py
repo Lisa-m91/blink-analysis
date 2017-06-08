@@ -27,7 +27,7 @@ def bin(roi, width=1):
     return sum(map(lambda start: roi[start:end:width], range(width)))
 
 stat_names = ["frame_photons", "blink_photons", "total_photons",
-              "blink_times", "total_times", "total_blinks"]
+              "blink_times", "total_times", "total_blinks", "on_rate"]
 
 def calculateStats(signal, on):
     stats = {}
@@ -39,12 +39,17 @@ def calculateStats(signal, on):
     else:
         off_blinks, on_blinks = blinks[::2], blinks[1::2]
 
+    last = np.flatnonzero(on)[-1] # index of last on event
+
     stats["frame_photons"] = signal[on].sum(axis=1).mean()
     stats["blink_photons"] = mean(map(np.sum, on_blinks))
     stats["total_photons"] = signal[on].sum()
     stats["blink_times"] = mean(map(len, on_blinks))
     stats["total_times"] = on.sum()
     stats["total_blinks"] = len(on_blinks)
+    # Add 2 to get time of last off-event
+    stats["on_rate"] = stats["total_blinks"] / (last + 2)
+
     return dict(stats)
 
 def analyze(rois, ons):
