@@ -44,8 +44,27 @@ def test_calculate_stats():
         'blink_times': 1.5,
         'total_times': 3,
         'total_blinks': 2,
-        'on_rate': 2/9,
+        'on_rate': 1/4,
     }
 
     assert calculateStats(signal, on) == expected
     assert calculateStats(signal[:-2], on[:-2]) == expected
+
+def test_calculate_blank_stats():
+    signal = np.array([
+        [[1, 1], [1, 2]],
+        [[1, 2], [2, 2]],
+        [[1, 5], [5, 2]],
+        [[1, 5], [8, 2]],
+        [[1, 1], [1, 2]],
+        [[1, 1], [1, 2]],
+        [[5, 9], [9, 2]],
+        [[1, 2], [0, 6]],
+        [[1, 2], [1, 0]],
+        [[1, 2], [1, 2]],
+    ])
+
+    on = np.zeros(len(signal), dtype='bool')
+    expected = {}
+
+    assert calculateStats(signal, on) == expected
