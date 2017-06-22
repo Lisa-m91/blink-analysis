@@ -45,6 +45,7 @@ def test_calculate_stats():
         'total_times': 3,
         'total_blinks': 2,
         'on_rate': 1/4,
+        'off_rate': 2/3,
     }
 
     assert calculateStats(signal, on) == expected
