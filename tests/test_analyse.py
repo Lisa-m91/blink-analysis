@@ -44,7 +44,7 @@ def test_calculate_stats():
         'blink_times': 1.5,
         'total_times': 3,
         'total_blinks': 2,
-        'on_rate': 1/4,
+        'on_rate': 2/5,
         'off_rate': 2/3,
     }
 

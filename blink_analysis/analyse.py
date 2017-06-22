@@ -38,6 +38,8 @@ def calculateStats(signal, on):
         on_blinks, off_blinks = blinks[::2], blinks[1::2]
     else:
         off_blinks, on_blinks = blinks[::2], blinks[1::2]
+    if not on[-1]:
+        off_blinks = off_blinks[:-1]
     try:
         last = np.flatnonzero(on)[-1]
     except IndexError:
@@ -50,7 +52,7 @@ def calculateStats(signal, on):
     stats["total_times"] = on.sum()
     stats["total_blinks"] = len(on_blinks)
     # Add 2 to get time of last off-event
-    stats["on_rate"] = stats["total_blinks"] / (last + 1)
+    stats["on_rate"] = stats["total_blinks"] / sum(map(len, off_blinks))
     stats["off_rate"] = stats["total_blinks"] / stats["total_times"]
 
     return stats
