@@ -52,7 +52,10 @@ def calculateStats(signal, on):
     stats["total_times"] = on.sum()
     stats["total_blinks"] = len(on_blinks)
     # Add 2 to get time of last off-event
-    stats["on_rate"] = stats["total_blinks"] / sum(map(len, off_blinks))
+    try:
+        stats["on_rate"] = stats["total_blinks"] / sum(map(len, off_blinks))
+    except ZeroDivisionError:
+        stats["on_rate"] = float('nan')
     stats["off_rate"] = stats["total_blinks"] / stats["total_times"]
 
     return stats
