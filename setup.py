@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name="Blink Analysis",
-      version="0.0.5",
+      version="0.0.6",
       description="A collection of scripts for analysing FRET/blinking.",
       packages=["blink_analysis"],
       requires=['tifffile (>=0.10.0)', 'numpy (>=1.10)', 'scipy (>= 0.18)'],

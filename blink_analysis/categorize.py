@@ -29,21 +29,20 @@ def smooth(on, smoothing=(1, 1)):
     on = on & binary_opening(on, structure=np.ones(smoothing[1], dtype="bool"))
     return on
 
-def categorize(roi):
+def categorize(roi, factor=4.0):
     fg_mask, bg_mask = masks(roi.shape[1:])
     signal = roi[:, fg_mask]
     background = roi[:, bg_mask]
-    cutoff = 1 / len(roi)
 
-    different = ttest_ind(signal, background, axis=1, equal_var=False).pvalue < cutoff
-    higher = np.mean(signal, axis=1) > np.mean(background, axis=1)
-
-    return different & higher
+    axes = tuple(range(1, signal.ndim))
+    peaks = np.amax(signal, axis=axes)
+    return peaks > (np.mean(background, axis=axes)
+                    + np.std(background, axis=axes) * factor)
 
 def run(args):
     with args.ROIs.open("rb") as roi_f, args.outfile.open("wb") as on_f:
         for on in map(partial(smooth, smoothing=args.smoothing),
-                      map(categorize, loadAll(roi_f))):
+                      map(partial(categorize, factor=args.factor), loadAll(roi_f))):
             dump(on, on_f)
 
 def image_grid(frames, ncols, fill=0):
@@ -100,6 +99,8 @@ def main(args=None):
     run_parser.add_argument("outfile", type=Path, help="The file to write on/off data to")
     run_parser.add_argument("--smoothing", nargs=2, type=int, default=(1, 1),
                             help="The number of 'off'/'on' frames required to end/begin a blink")
+    run_parser.add_argument("--factor", type=float, default=4.0,
+                            help="The minimum SNR to categorize an on-frame")
     run_parser.set_defaults(func=run)
 
     plot_parser = subparsers.add_parser("plot")
