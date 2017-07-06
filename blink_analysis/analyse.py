@@ -28,7 +28,7 @@ def mean(iterable):
 stat_names = ["frame_photons", "blink_photons", "total_photons", "blink_times",
               "total_times", "total_blinks", "on_rate", "off_rate"]
 
-def calculateStats(signal, on):
+def calculateStats(signal, on, photons=1.0, exposure=1.0):
     stats = {}
 
     signal = signal.reshape(len(signal), -1)
@@ -44,22 +44,22 @@ def calculateStats(signal, on):
     except IndexError:
         return {} # Will cause nothing to be appended to stats
 
-    stats["frame_photons"] = signal[on].sum(axis=1).mean()
-    stats["blink_photons"] = mean(map(np.sum, on_blinks))
-    stats["total_photons"] = signal[on].sum()
-    stats["blink_times"] = mean(map(len, on_blinks))
-    stats["total_times"] = on.sum()
+    stats["frame_photons"] = signal[on].sum(axis=1).mean() * photons
+    stats["blink_photons"] = mean(map(np.sum, on_blinks)) * photons
+    stats["total_photons"] = signal[on].sum() * photons
+    stats["blink_times"] = mean(map(len, on_blinks)) * exposure
+    stats["total_times"] = on.sum() * exposure
     stats["total_blinks"] = len(on_blinks)
     # Add 2 to get time of last off-event
     try:
-        stats["on_rate"] = stats["total_blinks"] / sum(map(len, off_blinks))
+        stats["on_rate"] = stats["total_blinks"] / (sum(map(len, off_blinks)) * exposure)
     except ZeroDivisionError:
         stats["on_rate"] = float('nan')
     stats["off_rate"] = stats["total_blinks"] / stats["total_times"]
 
     return stats
 
-def analyze(rois, ons):
+def analyze(rois, ons, *args, **kwargs):
     stats = {k: [] for k in stat_names}
     for roi, on in zip(rois, ons):
         fg_mask, bg_mask = masks(roi.shape[1:])
@@ -67,19 +67,23 @@ def analyze(rois, ons):
         background = roi[:, bg_mask]
 
         signal = (signal - background.mean(axis=1, keepdims=True)).clip(min=0)
-        for stat, vs in calculateStats(signal, on).items():
+        for stat, vs in calculateStats(signal, on, *args, **kwargs).items():
             stats[stat].append(vs)
     return stats
 
 @click.command("analyse")
 @click.argument("rois", type=Path)
 @click.argument("onfile", type=Path)
-def main(rois, onfile):
+@click.option("--photons", type=float, default=1.0,
+              help="The conversion of ADU to photons")
+@click.option("--exposure", type=float, default=1.0,
+              help="The conversion of frames to seconds")
+def main(rois, onfile, photons=1.0, exposure=1.0):
     from sys import stdout
     import csv
 
     with rois.open("rb") as roi_f, onfile.open("rb") as on_f:
-        stats = analyze(loadAll(roi_f), loadAll(on_f))
+        stats = analyze(loadAll(roi_f), loadAll(on_f), photons=photons, exposure=exposure)
 
     writer = csv.DictWriter(stdout, sorted(stats.keys()))
     writer.writeheader()

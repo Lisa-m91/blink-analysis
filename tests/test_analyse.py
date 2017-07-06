@@ -60,6 +60,23 @@ def test_calculate_stats():
     assert calculateStats(signal, on) == expected
     assert calculateStats(signal[:-2], on[:-2]) == expected
 
+    photons = 2.5
+    exposure = 3.8
+    expected = {
+        'frame_photons': expected['frame_photons'] * photons,
+        'blink_photons': expected['blink_photons'] * photons,
+        'total_photons': expected['total_photons'] * photons,
+        'blink_times': expected['blink_times'] * exposure,
+        'total_times': expected['total_times'] * exposure,
+        'total_blinks': expected['total_blinks'],
+        'on_rate': expected['on_rate'] / exposure,
+        'off_rate': expected['off_rate'] / exposure,
+    }
+    for k, v in calculateStats(signal, on, photons, exposure).items():
+        np.testing.assert_almost_equal(v, expected[k])
+    for k, v in calculateStats(signal[:-2], on[:-2], photons, exposure).items():
+        np.testing.assert_almost_equal(v, expected[k])
+
 def test_calculate_blank_stats():
     signal = np.array([
         [[1, 1], [1, 2]],
