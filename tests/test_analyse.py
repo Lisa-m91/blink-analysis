@@ -5,7 +5,14 @@ dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 from blink_analysis.analyse import *
 from math import isnan
 
-def test_main(tmpdir, capsys):
+import pytest
+
+@pytest.fixture()
+def runner():
+    from click.testing import CliRunner
+    return CliRunner()
+
+def test_main(tmpdir, capsys, runner):
     np.random.seed(4)
 
     rois_f = tmpdir.join('rois.pickle')
@@ -20,7 +27,8 @@ def test_main(tmpdir, capsys):
         for on in ons:
             dump(on, f)
 
-    main([str(rois_f), str(ons_f)])
+    result = runner.invoke(main, [str(rois_f), str(ons_f)])
+    assert result.exit_code == 0
 
 
 def test_calculate_stats():

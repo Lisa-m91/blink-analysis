@@ -6,6 +6,13 @@ from scipy.stats import ttest_ind
 from scipy.ndimage.morphology import binary_closing, binary_opening
 from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
+from pathlib import Path
+
+import click
+
+@click.group("categorize")
+def main():
+    pass
 
 def loadAll(f):
     while True:
@@ -39,10 +46,17 @@ def categorize(roi, factor=4.0):
     return peaks > (np.mean(background, axis=axes)
                     + np.std(background, axis=axes) * factor)
 
-def run(args):
-    with args.ROIs.open("rb") as roi_f, args.outfile.open("wb") as on_f:
-        for on in map(partial(smooth, smoothing=args.smoothing),
-                      map(partial(categorize, factor=args.factor), loadAll(roi_f))):
+@main.command()
+@click.argument("rois", type=Path)
+@click.argument("outfile", type=Path)
+@click.option("--smoothing", nargs=2, type=int, default=(1, 1),
+              help="The number of 'off'/'on' frames required to end/begin a blink")
+@click.option("--factor", type=float, default=4.0,
+              help="The minimum SNR to categorize an on-frame")
+def run(rois, outfile, smoothing=(1, 1), factor=4.0):
+    with rois.open("rb") as roi_f, outfile.open("wb") as on_f:
+        for on in map(partial(smooth, smoothing=smoothing),
+                      map(partial(categorize, factor=factor), loadAll(roi_f))):
             dump(on, on_f)
 
 def image_grid(frames, ncols, fill=0):
@@ -55,19 +69,28 @@ def image_grid(frames, ncols, fill=0):
     height, width, *shape = shape
     return grid.swapaxes(1, 2).reshape((height * nrows, width * ncols) + tuple(shape))
 
-def plot(args):
+@main.command()
+@click.argument("rois", type=Path)
+@click.argument("categories", type=Path)
+@click.option("--outfile", type=Path, default=None,
+              help="Where to save the plot (omit to display)")
+@click.option("-n", type=int, default=5, help="The number of traces to plot")
+@click.option("--ncols", type=int, default=80,
+              help="The number of columns to stack traces into")
+@click.option("--seed", type=int, default=None, help="The random seed for selecting traces")
+def plot(rois, categories, outfile=None, n=5, ncols=80, seed=None):
     import matplotlib
-    if args.outfile is not None:
+    if outfile is not None:
         matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    np.random.seed(args.seed)
+    np.random.seed(seed)
 
-    with args.ROIs.open("rb") as roi_f, args.categories.open("rb") as on_f:
+    with rois.open("rb") as roi_f, categories.open("rb") as on_f:
         data = list(zip(loadAll(roi_f), loadAll(on_f)))
-    idxs = np.random.choice(len(data), size=args.n, replace=False)
+    idxs = np.random.choice(len(data), size=n, replace=False)
 
-    fig, axs = plt.subplots(args.n, 1)
+    fig, axs = plt.subplots(n, 1)
     for ax, (roi, on) in zip(axs, map(data.__getitem__, idxs)):
         roi = np.pad(roi, [(0, 0), (1, 1), (1, 1)], mode='constant')
 
@@ -76,49 +99,12 @@ def plot(args):
         border_mask = border_mask * on.reshape((-1,) + (1,) * border_mask.ndim)
         roi[border_mask] = roi.max()
 
-        ax.imshow(image_grid(roi, args.ncols), cmap='gray')
+        ax.imshow(image_grid(roi, ncols), cmap='gray')
         ax.set_xticks([])
         ax.set_yticks([])
 
-    if args.outfile is None:
+    if outfile is None:
         plt.show()
     else:
         fig.tight_layout()
-        fig.savefig(str(args.outfile))
-
-def main(args=None):
-    from sys import argv
-    from argparse import ArgumentParser
-    from pathlib import Path
-
-    parser = ArgumentParser(description="Analyze single-particle traces.")
-    subparsers = parser.add_subparsers()
-
-    run_parser = subparsers.add_parser("run")
-    run_parser.add_argument("ROIs", type=Path, help="The pickled ROIs to process")
-    run_parser.add_argument("outfile", type=Path, help="The file to write on/off data to")
-    run_parser.add_argument("--smoothing", nargs=2, type=int, default=(1, 1),
-                            help="The number of 'off'/'on' frames required to end/begin a blink")
-    run_parser.add_argument("--factor", type=float, default=4.0,
-                            help="The minimum SNR to categorize an on-frame")
-    run_parser.set_defaults(func=run)
-
-    plot_parser = subparsers.add_parser("plot")
-    plot_parser.add_argument("ROIs", type=Path, help="The ROIs to plot")
-    plot_parser.add_argument("categories", type=Path,
-                             help="The saved categories to visualize")
-    plot_parser.add_argument("outfile", nargs='?', type=Path, default=None,
-                             help="Where to save the plot (omit to display)")
-    plot_parser.add_argument("-n", type=int, default=5,
-                             help="The number of traces to plot")
-    plot_parser.add_argument("--ncols", type=int, default=80,
-                             help="The number of columns to stack traces into")
-    plot_parser.add_argument("--seed", type=int, default=None,
-                             help="The random seed for selecting traces")
-    plot_parser.set_defaults(func=plot)
-
-    args = parser.parse_args(argv[1:] if args is None else args)
-    args.func(args)
-
-if __name__ == "__main__":
-    main()
+        fig.savefig(str(outfile))

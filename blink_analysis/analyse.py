@@ -4,6 +4,9 @@ from functools import partial
 import numpy as np
 from scipy.stats import ttest_ind
 from pickle import load
+from pathlib import Path
+
+import click
 
 from .categorize import masks
 
@@ -21,10 +24,6 @@ def mean(iterable):
         total += i
         ctr += 1
     return total / ctr
-
-def bin(roi, width=1):
-    end = len(roi) // width * width
-    return sum(map(lambda start: roi[start:end:width], range(width)))
 
 stat_names = ["frame_photons", "blink_photons", "total_photons", "blink_times",
               "total_times", "total_blinks", "on_rate", "off_rate"]
@@ -72,25 +71,17 @@ def analyze(rois, ons):
             stats[stat].append(vs)
     return stats
 
-def main(args=None):
-    from sys import argv, stdout
-    from argparse import ArgumentParser
-    from pathlib import Path
+@click.command("analyse")
+@click.argument("rois", type=Path)
+@click.argument("onfile", type=Path)
+def main(rois, onfile):
+    from sys import stdout
     import csv
 
-    parser = ArgumentParser(description="Analyze single-particle traces.")
-    parser.add_argument("ROIs", type=Path, help="The pickled ROIs to process")
-    parser.add_argument("onfile", type=Path, help="The pickled ROIs to process")
-    parser.add_argument("--bin", type=int, default=1, help="Number of frames to bin.")
-    args = parser.parse_args(argv[1:] if args is None else args)
-
-    with args.ROIs.open("rb") as roi_f, args.onfile.open("rb") as on_f:
+    with rois.open("rb") as roi_f, onfile.open("rb") as on_f:
         stats = analyze(loadAll(roi_f), loadAll(on_f))
 
     writer = csv.DictWriter(stdout, sorted(stats.keys()))
     writer.writeheader()
     for row in zip(*stats.values()):
         writer.writerow(dict(zip(stats.keys(), row)))
-
-if __name__ == "__main__":
-    main()

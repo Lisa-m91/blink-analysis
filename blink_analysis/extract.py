@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from functools import partial
 from itertools import tee
+from pathlib import Path
+
+import click
+from tiffutil.util import SingleTiffFile
 
 def makeRegion(peak, size):
     starts = peak - size
@@ -55,42 +59,27 @@ def extractAll(peaks, series, size=1, start=0, end=None):
             roi[s] = frames[(slice(None),) + region]
     return rois
 
-def main(args=None):
-    from sys import argv, stdout
-    from argparse import ArgumentParser
-    from pathlib import Path
+@click.command("extract")
+@click.argument("peaks", type=Path)
+@click.argument("images", nargs=-1, type=SingleTiffFile)
+@click.option("--size", type=int, default=2, help="The radius of the spot to extract")
+@click.option("--start", type=int, default=0, help="The first frame to extract")
+@click.option("--end", type=int, default=None, help="The last frame to extract")
+def main(peaks, images, size=2, start=0, end=None):
+    from sys import stdout
     from itertools import chain
     from pickle import load, dump, HIGHEST_PROTOCOL
     dump = partial(dump, protocol=HIGHEST_PROTOCOL)
     import csv
 
-    from tifffile import TiffFile
+    series = chain.from_iterable(tif.series for tif in images)
+    image_shape = images[0].series[0].asarray().shape[1:]
 
-    parser = ArgumentParser(description="Extract points from a video.")
-
-    parser.add_argument("peaks", type=Path, help="The locations of peaks to pick")
-    parser.add_argument("images", nargs='+', type=partial(TiffFile, multifile=False),
-                        help="The video to process.")
-    parser.add_argument("--size", type=int, default=2,
-                        help="The radius of the spot to extract.")
-    parser.add_argument("--range", type=str, nargs=2, default=("start", "end"),
-                        help="The range of frames to extract.")
-    args = parser.parse_args(argv[1:] if args is None else args)
-
-    series = chain.from_iterable(tif.series for tif in args.images)
-    image_shape = args.images[0].series[0].asarray().shape[1:]
-
-    with args.peaks.open("r") as f:
+    with peaks.open("r") as f:
         reader = csv.reader(f)
         peaks = list(map(list, map(partial(map, int), reader)))
 
-    start, end = args.range
-    start = 0 if start == "start" else int(start)
-    end = None if end == "end" else int(end)
-    rois = extractAll(peaks, list(series), size=args.size, start=start, end=end)
+    rois = extractAll(peaks, list(series), size=size, start=start, end=end)
 
     for roi in rois:
         dump(roi, stdout.buffer)
-
-if __name__ == '__main__':
-    main()

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-from importlib import import_module
+import click
 
+@click.group()
 def main(args=None):
-    from sys import argv
-    if args is None:
-        args = argv
-    _, program, *args = args
+    pass
 
-    mod = import_module('.{}'.format(program), 'blink_analysis')
-    mod.main(args)
+from .analyse import main as analyse
+main.add_command(analyse)
+from .categorize import main as categorize
+main.add_command(categorize)
+from .extract import main as extract
+main.add_command(extract)
 
 if __name__ == "__main__":
     main()
