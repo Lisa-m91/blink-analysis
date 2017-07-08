@@ -74,11 +74,14 @@ def image_grid(frames, ncols, fill=0):
 @click.argument("categories", type=Path)
 @click.option("--outfile", type=Path, default=None,
               help="Where to save the plot (omit to display)")
-@click.option("-n", type=int, default=5, help="The number of traces to plot")
+@click.option("--size", type=(float, float), default=(3, 10),
+              help="The size (in inches) of the figure")
+@click.option("-n", type=(int, int), default=(1, 5),
+              help="The number of traces to plot (cols rows)")
 @click.option("--ncols", type=int, default=80,
               help="The number of columns to stack traces into")
 @click.option("--seed", type=int, default=None, help="The random seed for selecting traces")
-def plot(rois, categories, outfile=None, n=5, ncols=80, seed=None):
+def plot(rois, categories, outfile=None, size=(3, 10), n=5, ncols=80, seed=None):
     import matplotlib
     if outfile is not None:
         matplotlib.use('Agg')
@@ -88,9 +91,10 @@ def plot(rois, categories, outfile=None, n=5, ncols=80, seed=None):
 
     with rois.open("rb") as roi_f, categories.open("rb") as on_f:
         data = list(zip(loadAll(roi_f), loadAll(on_f)))
-    idxs = np.random.choice(len(data), size=n, replace=False)
+    idxs = np.random.choice(len(data), size=n, replace=False).ravel()
 
-    fig, axs = plt.subplots(n, 1)
+    fig, axs = plt.subplots(*n, figsize=size)
+    axs = axs.ravel()
     for ax, (roi, on) in zip(axs, map(data.__getitem__, idxs)):
         roi = np.pad(roi, [(0, 0), (1, 1), (1, 1)], mode='constant')
 
