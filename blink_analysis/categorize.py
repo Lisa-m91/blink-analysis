@@ -57,7 +57,7 @@ def run(rois, outfile, smoothing=(1, 1), factor=4.0):
     with rois.open("rb") as roi_f, outfile.open("wb") as on_f:
         for on in map(partial(smooth, smoothing=smoothing),
                       map(partial(categorize, factor=factor), loadAll(roi_f))):
-            dump(on, on_f)
+            dump(on.astype('uint8'), on_f)
 
 def image_grid(frames, ncols, fill=0):
     nframes, *shape = frames.shape
@@ -75,17 +75,18 @@ def image_grid(frames, ncols, fill=0):
 @click.option("--outfile", type=Path, default=None,
               help="Where to save the plot (omit to display)")
 @click.option("--size", type=(float, float), default=(3, 10),
-              help="The size (in inches) of the figure")
-@click.option("-n", type=(int, int), default=(1, 5),
-              help="The number of traces to plot (cols rows)")
+              help="The size (width height, in inches) of the figure")
+@click.option("-n", type=(int, int), default=(5, 1),
+              help="The number of traces to plot (rows cols)")
 @click.option("--ncols", type=int, default=80,
               help="The number of columns to stack traces into")
 @click.option("--seed", type=int, default=None, help="The random seed for selecting traces")
-def plot(rois, categories, outfile=None, size=(3, 10), n=5, ncols=80, seed=None):
+def plot(rois, categories, outfile=None, size=(3, 10), n=(5, 1), ncols=80, seed=None):
     import matplotlib
     if outfile is not None:
         matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
 
     np.random.seed(seed)
 
@@ -93,17 +94,22 @@ def plot(rois, categories, outfile=None, size=(3, 10), n=5, ncols=80, seed=None)
         data = list(zip(loadAll(roi_f), loadAll(on_f)))
     idxs = np.random.choice(len(data), size=n, replace=False).ravel()
 
-    fig, axs = plt.subplots(*n, figsize=size)
+    fig, axs = plt.subplots(*n, figsize=size, squeeze=False)
     axs = axs.ravel()
     for ax, (roi, on) in zip(axs, map(data.__getitem__, idxs)):
         roi = np.pad(roi, [(0, 0), (1, 1), (1, 1)], mode='constant')
-
-        border_mask = np.ones(roi.shape[1:], dtype='bool')
-        border_mask[(slice(1, -1),) * border_mask.ndim] = 0
-        border_mask = border_mask * on.reshape((-1,) + (1,) * border_mask.ndim)
-        roi[border_mask] = roi.max()
-
         ax.imshow(image_grid(roi, ncols), cmap='gray')
+
+        for frame, state in enumerate(on):
+            row = frame // ncols
+            col = frame % ncols
+            pos = (row * roi.shape[-2], col * roi.shape[-1])
+            ax.add_patch(patches.Rectangle(
+                pos[::-1], *[s-1 for s in roi.shape[-2:]],
+                fill=False, edgecolor="C{}".format(state),
+                linewidth=0.5
+            ))
+
         ax.set_xticks([])
         ax.set_yticks([])
 

@@ -7,6 +7,8 @@ from math import isnan
 
 import pytest
 
+on_states = np.asarray([1], dtype='uint8')
+
 @pytest.fixture()
 def runner():
     from click.testing import CliRunner
@@ -57,8 +59,8 @@ def test_calculate_stats():
         'off_rate': 2/3,
     }
 
-    assert calculateStats(signal, on) == expected
-    assert calculateStats(signal[:-2], on[:-2]) == expected
+    assert calculateStats(signal, on, on_states) == expected
+    assert calculateStats(signal[:-2], on[:-2], on_states) == expected
 
     photons = 2.5
     exposure = 3.8
@@ -72,9 +74,9 @@ def test_calculate_stats():
         'on_rate': expected['on_rate'] / exposure,
         'off_rate': expected['off_rate'] / exposure,
     }
-    for k, v in calculateStats(signal, on, photons, exposure).items():
+    for k, v in calculateStats(signal, on, on_states, photons, exposure).items():
         np.testing.assert_almost_equal(v, expected[k])
-    for k, v in calculateStats(signal[:-2], on[:-2], photons, exposure).items():
+    for k, v in calculateStats(signal[:-2], on[:-2], on_states, photons, exposure).items():
         np.testing.assert_almost_equal(v, expected[k])
 
 def test_calculate_blank_stats():
@@ -94,7 +96,7 @@ def test_calculate_blank_stats():
     on = np.zeros(len(signal), dtype='bool')
     expected = {}
 
-    assert calculateStats(signal, on) == expected
+    assert calculateStats(signal, on, on_states) == expected
 
 def test_calculate_single_blink_stats():
     signal = np.array([
@@ -121,6 +123,6 @@ def test_calculate_single_blink_stats():
         'off_rate': 1/3,
     }
 
-    stats = calculateStats(signal, on)
+    stats = calculateStats(signal, on, on_states)
     assert isnan(stats.pop('on_rate'))
     assert stats == expected

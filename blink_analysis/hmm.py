@@ -81,5 +81,4 @@ def categorize(model, signal, output):
     with signal.open("rb") as f, output.open("wb") as out_f:
         traces = map(partial(np.reshape, newshape=(-1, 1)), map(trace, loadAll(f)))
         for states in map(model.predict, traces):
-            on = (states == on_states.reshape(-1, 1)).any(axis=0)
-            dump(on, out_f)
+            dump(states.astype('uint8'), out_f)

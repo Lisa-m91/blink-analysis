@@ -28,9 +28,10 @@ def mean(iterable):
 stat_names = ["frame_photons", "blink_photons", "total_photons", "blink_times",
               "total_times", "total_blinks", "on_rate", "off_rate"]
 
-def calculateStats(signal, on, photons=1.0, exposure=1.0):
+def calculateStats(signal, states, on_states, photons=1.0, exposure=1.0):
     stats = {}
 
+    on = (states == on_states.reshape(-1, 1)).any(axis=0)
     signal = signal.reshape(len(signal), -1)
     blinks = np.split(signal, np.flatnonzero(np.diff(on)) + 1)
     if on[0]:
@@ -59,31 +60,36 @@ def calculateStats(signal, on, photons=1.0, exposure=1.0):
 
     return stats
 
-def analyze(rois, ons, *args, **kwargs):
+def analyze(rois, statess, *args, **kwargs):
     stats = {k: [] for k in stat_names}
-    for roi, on in zip(rois, ons):
+    for roi, states in zip(rois, statess):
         fg_mask, bg_mask = masks(roi.shape[1:])
         signal = roi[:, fg_mask]
         background = roi[:, bg_mask]
 
         signal = (signal - background.mean(axis=1, keepdims=True)).clip(min=0)
-        for stat, vs in calculateStats(signal, on, *args, **kwargs).items():
+        for stat, vs in calculateStats(signal, states, *args, **kwargs).items():
             stats[stat].append(vs)
     return stats
 
 @click.command("analyse")
 @click.argument("rois", type=Path)
-@click.argument("onfile", type=Path)
+@click.argument("statefile", type=Path)
 @click.option("--photons", type=float, default=1.0,
               help="The conversion of ADU to photons")
 @click.option("--exposure", type=float, default=1.0,
               help="The conversion of frames to seconds")
-def main(rois, onfile, photons=1.0, exposure=1.0):
+@click.option("--on-state", type=int, multiple=True,
+              help="The labels of the on-states")
+def main(rois, statefile, photons=1.0, exposure=1.0, on_state=()):
     from sys import stdout
     import csv
 
-    with rois.open("rb") as roi_f, onfile.open("rb") as on_f:
-        stats = analyze(loadAll(roi_f), loadAll(on_f), photons=photons, exposure=exposure)
+    on_state = np.asarray(on_state)
+
+    with rois.open("rb") as roi_f, statefile.open("rb") as state_f:
+        stats = analyze(loadAll(roi_f), loadAll(state_f), on_states=on_state,
+                        photons=photons, exposure=exposure)
 
     writer = csv.DictWriter(stdout, sorted(stats.keys()))
     writer.writeheader()
