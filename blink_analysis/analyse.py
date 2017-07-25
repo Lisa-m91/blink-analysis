@@ -25,6 +25,15 @@ def mean(iterable):
         ctr += 1
     return total / ctr
 
+labels = {
+    'frame_photons': "Photons/frame",
+    'blink_photons': "Photons/blink",
+    'total_photons': "Total photons",
+    'blink_times': "On-state time (s)",
+    'total_times': "Total on time (s)",
+    'total_blinks': "Number of blinks",
+}
+
 stat_names = ["frame_photons", "blink_photons", "total_photons", "blink_times",
               "total_times", "total_blinks", "on_rate", "off_rate"]
 
