@@ -1,6 +1,14 @@
 import numpy as np
 from blink_analysis.categorize import *
 
+import pytest
+
+from click.testing import CliRunner
+
+@pytest.fixture
+def runner():
+    return CliRunner()
+
 def test_smooth():
     data     = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0], dtype='bool')
     expected = np.array([0, 0, 0, 1, 1, 1, 1, 0, 0], dtype='bool')
@@ -64,3 +72,22 @@ def test_image_grid():
                          [ 8,  9,  0,  0],
                          [10, 11,  0,  0]])
     np.testing.assert_equal(image_grid(data[:3], 2), expected)
+
+def test_plot(runner, tmpdir):
+    rois = np.random.randint(0, 200, size=(10, 20, 4, 4)).astype('uint8')
+    roi_f = tmpdir.join("rois.pickle")
+    with roi_f.open("wb") as f:
+        for roi in rois:
+            dump(roi, f)
+
+    ons = np.random.randint(0, 2, size=rois.shape[:2]).astype('uint8')
+    on_f = tmpdir.join("ons.pickle")
+    with on_f.open("wb") as f:
+        for on in ons:
+            dump(on, f)
+
+    result = runner.invoke(
+        plot, [str(roi_f), str(on_f), "--outfile", str(tmpdir.join("test.pdf"))]
+    )
+    print(result.output)
+    assert result.exit_code == 0

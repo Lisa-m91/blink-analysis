@@ -7,6 +7,7 @@ from scipy.ndimage.morphology import binary_closing, binary_opening
 from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 from pathlib import Path
+from operator import itemgetter
 
 import click
 
@@ -76,12 +77,15 @@ def image_grid(frames, ncols, fill=0):
               help="Where to save the plot (omit to display)")
 @click.option("--size", type=(float, float), default=(3, 10),
               help="The size (width height, in inches) of the figure")
+@click.option("--length", type=int, default=None,
+              help="The number of frames to plot")
 @click.option("-n", type=(int, int), default=(5, 1),
               help="The number of traces to plot (rows cols)")
 @click.option("--ncols", type=int, default=80,
               help="The number of columns to stack traces into")
 @click.option("--seed", type=int, default=None, help="The random seed for selecting traces")
-def plot(rois, categories, outfile=None, size=(3, 10), n=(5, 1), ncols=80, seed=None):
+def plot(rois, categories, length=None, outfile=None,
+         size=(3, 10), n=(5, 1), ncols=80, seed=None):
     import matplotlib
     if outfile is not None:
         matplotlib.use('Agg')
@@ -91,7 +95,8 @@ def plot(rois, categories, outfile=None, size=(3, 10), n=(5, 1), ncols=80, seed=
     np.random.seed(seed)
 
     with rois.open("rb") as roi_f, categories.open("rb") as on_f:
-        data = list(zip(loadAll(roi_f), loadAll(on_f)))
+        getter = itemgetter(slice(None, length))
+        data = list(zip(map(getter, loadAll(roi_f)), map(getter, loadAll(on_f))))
     idxs = np.random.choice(len(data), size=n, replace=False).ravel()
 
     fig, axs = plt.subplots(*n, figsize=size, squeeze=False)
