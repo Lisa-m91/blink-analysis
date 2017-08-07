@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 from itertools import chain
-from functools import partial
+from functools import partial, reduce
 import numpy as np
 from scipy.stats import ttest_ind
 from scipy.ndimage.morphology import binary_closing, binary_opening
 from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 from pathlib import Path
-from operator import itemgetter
+import operator as op
 
 import click
 
@@ -95,12 +95,14 @@ def plot(rois, categories, length=None, outfile=None,
     np.random.seed(seed)
 
     with rois.open("rb") as roi_f, categories.open("rb") as on_f:
-        getter = itemgetter(slice(None, length))
+        getter = op.itemgetter(slice(None, length))
         data = list(zip(map(getter, loadAll(roi_f)), map(getter, loadAll(on_f))))
-    idxs = np.random.choice(len(data), size=n, replace=False).ravel()
 
     fig, axs = plt.subplots(*n, figsize=size, squeeze=False)
     axs = axs.ravel()
+
+    n = reduce(op.mul, n)
+    idxs = np.random.choice(len(data), size=min(n, len(data)), replace=False)
     for ax, (roi, on) in zip(axs, map(data.__getitem__, idxs)):
         roi = np.pad(roi, [(0, 0), (1, 1), (1, 1)], mode='constant')
         ax.imshow(image_grid(roi, ncols), cmap='gray')
