@@ -73,7 +73,7 @@ def test_image_grid():
                          [10, 11,  0,  0]])
     np.testing.assert_equal(image_grid(data[:3], 2), expected)
 
-def test_plot(runner, tmpdir):
+def test_plot_grid(runner, tmpdir):
     rois = np.random.randint(0, 200, size=(10, 20, 4, 4)).astype('uint8')
     roi_f = tmpdir.join("rois.pickle")
     with roi_f.open("wb") as f:
@@ -87,7 +87,26 @@ def test_plot(runner, tmpdir):
             dump(on, f)
 
     result = runner.invoke(
-        plot, [str(roi_f), str(on_f), "--outfile", str(tmpdir.join("test.pdf"))]
+        plot, ["--output", str(tmpdir.join("test.pdf")), "grid", str(roi_f), str(on_f)]
+    )
+    print(result.output)
+    assert result.exit_code == 0
+
+def test_plot_traces(runner, tmpdir):
+    rois = np.random.randint(0, 200, size=(10, 20, 4, 4)).astype('uint8')
+    roi_f = tmpdir.join("rois.pickle")
+    with roi_f.open("wb") as f:
+        for roi in rois:
+            dump(roi, f)
+
+    ons = np.random.randint(0, 2, size=rois.shape[:2]).astype('uint8')
+    on_f = tmpdir.join("ons.pickle")
+    with on_f.open("wb") as f:
+        for on in ons:
+            dump(on, f)
+
+    result = runner.invoke(
+        plot, ["--output", str(tmpdir.join("test.pdf")), "traces", str(roi_f), str(on_f)]
     )
     print(result.output)
     assert result.exit_code == 0

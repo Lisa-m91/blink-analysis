@@ -70,40 +70,72 @@ def image_grid(frames, ncols, fill=0):
     height, width, *shape = shape
     return grid.swapaxes(1, 2).reshape((height * nrows, width * ncols) + tuple(shape))
 
-@main.command()
-@click.argument("rois", type=Path)
-@click.argument("categories", type=Path)
-@click.option("--outfile", type=Path, default=None,
+default_colors = list(map("C{}".format, range(10)))
+@main.group()
+@click.option("--output", type=Path, default=None,
               help="Where to save the plot (omit to display)")
-@click.option("--size", type=(float, float), default=(3, 10),
+@click.option("--figsize", type=(float, float), default=(3, 10),
               help="The size (width height, in inches) of the figure")
 @click.option("--length", type=int, default=None,
               help="The number of frames to plot")
 @click.option("-n", type=(int, int), default=(5, 1),
               help="The number of traces to plot (rows cols)")
-@click.option("--ncols", type=int, default=80,
-              help="The number of columns to stack traces into")
-@click.option("--seed", type=int, default=None, help="The random seed for selecting traces")
-def plot(rois, categories, length=None, outfile=None,
-         size=(3, 10), n=(5, 1), ncols=80, seed=None):
-    import matplotlib
-    if outfile is not None:
+@click.option("--color", type=str, default=default_colors, multiple=True,
+              help="The colors to plot each state in")
+@click.option("--seed", type=int, default=None,
+              help="The random seed for selecting traces")
+@click.pass_context
+def plot(ctx, length=None, output=None, figsize=(3, 10),
+         n=(5, 1), color=default_colors, seed=None):
+    ctx.obj = {'LENGTH': length, 'COLORS': np.asarray(color), 'N': reduce(op.mul, n),}
+
+    if output is not None:
+        import matplotlib
         matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+
+    fig, axs = plt.subplots(*n, figsize=figsize, squeeze=False, sharex=True, sharey=True)
+    ctx.obj['AXS'] = axs.ravel()
+    ctx.obj['FIG'] = fig
+
+    rng = np.random.RandomState(seed)
+    ctx.obj['RNG'] = rng
+
+@plot.resultcallback()
+def save(fig, length=None, output=None, figsize=(3, 10),
+         n=(5, 1), color=default_colors, seed=None):
+    import matplotlib.pyplot as plt
+    fig.set_size_inches(*figsize)
+    fig.tight_layout()
+
+    if output:
+        fig.savefig(str(output))
+    else:
+        plt.show()
+
+def load_data(files, length):
+    rois, categories = [], []
+    getter = op.itemgetter(slice(None, length))
+    for roi_f, category_f in zip(files[0::2], files[1::2]):
+        with roi_f.open("rb") as roi_f, category_f.open("rb") as category_f:
+            rois.extend(map(getter, loadAll(roi_f)))
+            categories.extend(map(getter, loadAll(category_f)))
+    return np.asarray(rois), np.asarray(categories)
+
+@plot.command()
+@click.argument("files", type=Path, nargs=-1)
+@click.option("--ncols", type=int, default=80,
+              help="The number of columns to stack traces into")
+@click.pass_context
+def grid(ctx, files, ncols=80):
     import matplotlib.patches as patches
 
-    np.random.seed(seed)
+    rois, categories = load_data(files, ctx.obj['LENGTH'])
 
-    with rois.open("rb") as roi_f, categories.open("rb") as on_f:
-        getter = op.itemgetter(slice(None, length))
-        data = list(zip(map(getter, loadAll(roi_f)), map(getter, loadAll(on_f))))
-
-    fig, axs = plt.subplots(*n, figsize=size, squeeze=False)
-    axs = axs.ravel()
-
-    n = reduce(op.mul, n)
-    idxs = np.random.choice(len(data), size=min(n, len(data)), replace=False)
-    for ax, (roi, on) in zip(axs, map(data.__getitem__, idxs)):
+    idxs = ctx.obj['RNG'].choice(
+        len(rois), size=min(ctx.obj['N'], len(rois)), replace=False
+    )
+    for ax, roi, on in zip(ctx.obj['AXS'], rois[idxs], categories[idxs]):
         roi = np.pad(roi, [(0, 0), (1, 1), (1, 1)], mode='constant')
         ax.imshow(image_grid(roi, ncols), cmap='gray')
 
@@ -113,15 +145,34 @@ def plot(rois, categories, length=None, outfile=None,
             pos = (row * roi.shape[-2], col * roi.shape[-1])
             ax.add_patch(patches.Rectangle(
                 pos[::-1], *[s-1 for s in roi.shape[-2:]],
-                fill=False, edgecolor="C{}".format(state),
-                linewidth=0.5
+                fill=False, edgecolor=ctx.obj['COLORS'][state], linewidth=0.5
             ))
 
         ax.set_xticks([])
         ax.set_yticks([])
+        ax.axis('off')
+    return ctx.obj['FIG']
 
-    if outfile is None:
-        plt.show()
-    else:
-        fig.tight_layout()
-        fig.savefig(str(outfile))
+@plot.command()
+@click.argument("files", type=Path, nargs=-1)
+@click.pass_context
+def traces(ctx, files):
+    rois, categories = load_data(files, ctx.obj['LENGTH'])
+
+    idxs = ctx.obj['RNG'].choice(
+        len(rois), size=min(ctx.obj['N'], len(rois)), replace=False
+    )
+    for ax, roi, on in zip(ctx.obj['AXS'], rois[idxs], categories[idxs]):
+        fg_mask, bg_mask = masks(roi.shape[1:])
+        trace = np.mean(roi[:, fg_mask], axis=1)
+        ax.plot(trace, linewidth=0.5, color='black', alpha=0.5)
+        ax.scatter(
+            np.arange(len(trace)), trace, facecolor=ctx.obj['COLORS'][on], s=1.5,
+            edgecolor='none', marker='o'
+        )
+
+        bg_trace = np.mean(roi[:, bg_mask], axis=1)
+        ax.plot(bg_trace, linewidth=0.5, color='black', alpha=0.3)
+        ax.set_ylabel("intensity")
+    ctx.obj['AXS'][-1].set_xlabel("frame")
+    return ctx.obj['FIG']
