@@ -4,3 +4,4 @@ build
 dist
 install
 *.egg-info
+*.pyc
