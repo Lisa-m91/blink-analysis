@@ -131,6 +131,8 @@ def grid(ctx, files, ncols=80):
     import matplotlib.patches as patches
 
     rois, categories = load_data(files, ctx.obj['LENGTH'])
+    if not len(rois):
+        return ctx.obj['FIG']
 
     idxs = ctx.obj['RNG'].choice(
         len(rois), size=min(ctx.obj['N'], len(rois)), replace=False
@@ -158,6 +160,8 @@ def grid(ctx, files, ncols=80):
 @click.pass_context
 def traces(ctx, files):
     rois, categories = load_data(files, ctx.obj['LENGTH'])
+    if not len(rois):
+        return ctx.obj['FIG']
 
     idxs = ctx.obj['RNG'].choice(
         len(rois), size=min(ctx.obj['N'], len(rois)), replace=False
