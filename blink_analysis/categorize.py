@@ -4,6 +4,7 @@ from functools import partial, reduce
 import numpy as np
 from scipy.stats import ttest_ind
 from scipy.ndimage.morphology import binary_closing, binary_opening
+from scipy.ndimage import gaussian_laplace
 from pickle import load, dump, HIGHEST_PROTOCOL
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 from pathlib import Path
@@ -37,27 +38,32 @@ def smooth(on, smoothing=(1, 1)):
     on = on & binary_opening(on, structure=np.ones(smoothing[1], dtype="bool"))
     return on
 
-def categorize(roi, factor=4.0):
+def categorize(roi, factor=400, sigma=2.0):
     fg_mask, bg_mask = masks(roi.shape[1:])
     signal = roi[:, fg_mask]
     background = roi[:, bg_mask]
 
-    axes = tuple(range(1, signal.ndim))
-    peaks = np.amax(signal, axis=axes)
-    return peaks > (np.mean(background, axis=axes)
-                    + np.std(background, axis=axes) * factor)
+    peaks = map(np.amin, map(
+            partial(op.mul, sigma**2),
+            map(partial(gaussian_laplace, sigma=2), roi.astype('float32'))
+        ))
+    return np.asarray(list(peaks)) < -factor
+
 
 @main.command()
 @click.argument("rois", type=Path)
 @click.argument("outfile", type=Path)
 @click.option("--smoothing", nargs=2, type=int, default=(1, 1),
               help="The number of 'off'/'on' frames required to end/begin a blink")
-@click.option("--factor", type=float, default=4.0,
+@click.option("--factor", type=float, default=400,
+              help="The minimum peak intensity to categorize an on-frame")
+@click.option("--sigma", type=float, default=2,
               help="The minimum SNR to categorize an on-frame")
-def run(rois, outfile, smoothing=(1, 1), factor=4.0):
+def run(rois, outfile, smoothing=(1, 1), factor=400, sigma=2):
     with rois.open("rb") as roi_f, outfile.open("wb") as on_f:
-        for on in map(partial(smooth, smoothing=smoothing),
-                      map(partial(categorize, factor=factor), loadAll(roi_f))):
+        smooth_ = partial(smooth, smoothing=smoothing)
+        categorize_ = partial(categorize, factor=factor, sigma=sigma)
+        for on in map(smooth_, map(categorize_, loadAll(roi_f))):
             dump(on.astype('uint8'), on_f)
 
 def image_grid(frames, ncols, fill=0):
