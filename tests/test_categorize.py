@@ -74,7 +74,7 @@ def test_image_grid():
     np.testing.assert_equal(image_grid(data[:3], 2), expected)
 
 def test_plot_grid(runner, tmpdir):
-    rois = np.random.randint(0, 200, size=(10, 20, 4, 4)).astype('uint8')
+    rois = np.random.randint(1, 200, size=(10, 20, 4, 4)).astype('uint8')
     roi_f = tmpdir.join("rois.pickle")
     with roi_f.open("wb") as f:
         for roi in rois:

@@ -143,9 +143,14 @@ def grid(ctx, files, ncols=80):
     idxs = ctx.obj['RNG'].choice(
         len(rois), size=min(ctx.obj['N'], len(rois)), replace=False
     )
+    vmin = rois[idxs].min()
+    vmax = rois[idxs].max()
     for ax, roi, on in zip(ctx.obj['AXS'], rois[idxs], categories[idxs]):
         roi = np.pad(roi, [(0, 0), (1, 1), (1, 1)], mode='constant')
-        ax.imshow(image_grid(roi, ncols), cmap='gray')
+        ax.imshow(
+            image_grid(roi, ncols), vmin=vmin, vmax=vmax,
+            cmap='gray', interpolation='nearest'
+        )
 
         for frame, state in enumerate(on):
             row = frame // ncols
