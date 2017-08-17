@@ -43,11 +43,9 @@ def categorize(roi, factor=400, sigma=2.0):
     signal = roi[:, fg_mask]
     background = roi[:, bg_mask]
 
-    peaks = map(np.amin, map(
-            partial(op.mul, sigma**2),
-            map(partial(gaussian_laplace, sigma=2), roi.astype('float32'))
-        ))
-    return np.asarray(list(peaks)) < -factor
+    different = ttest_ind(signal, background, axis=1, equal_var=False).pvalue < factor
+    higher = np.mean(signal, axis=1) > np.mean(background, axis=1)
+    return different & higher
 
 
 @main.command()
