@@ -113,7 +113,8 @@ def save(fig, length=None, output=None, figsize=(3, 10),
     fig.tight_layout()
 
     if output:
-        fig.savefig(str(output))
+        # dpi=600 is workaround for matplotlib#8981
+        fig.savefig(str(output), dpi=600)
     else:
         plt.show()
 
