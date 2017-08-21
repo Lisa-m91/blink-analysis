@@ -2,6 +2,7 @@ from pathlib import Path
 from functools import partial
 from itertools import accumulate
 from pickle import load, dump, HIGHEST_PROTOCOL
+import operator as op
 dump = partial(dump, protocol=HIGHEST_PROTOCOL)
 
 import click
@@ -43,9 +44,9 @@ on_states = np.array([0])
 @click.option("--signal", type=float)
 @click.option("--variance", type=float)
 def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0):
-    means = np.array([signal, bias, bias]).reshape(-1, 1)
-    covars = np.array([variance, noise, noise]).reshape(-1, 1)
-    startprob = normalize(np.asarray([[1, 1, 1]])).reshape(-1)
+    means = np.array([signal, bias, bias])[:, None]
+    covars = np.array([variance, noise, noise])[:, None]
+    startprob = normalize(np.asarray([[1, 1, 1]]))[0]
     trans = normalize(np.array([[0.5, 0.5, 0.1], # on
                                 [0.1, 0.9, 0.0], # off
                                 [0.0, 0.0, 1.0]])) # bleached
@@ -66,7 +67,7 @@ def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0):
         with signal.open("rb") as f:
             traces.extend(map(trace, loadAll(f)))
 
-    model = model.fit(np.concatenate(traces).reshape(-1, 1), list(map(len, traces)))
+    model = model.fit(np.concatenate(traces)[:, None], list(map(len, traces)))
 
     with output.open("wb") as f:
         dump(model, f)
@@ -79,6 +80,6 @@ def categorize(model, signal, output):
     with model.open("rb") as f:
         model = load(f)
     with signal.open("rb") as f, output.open("wb") as out_f:
-        traces = map(partial(np.reshape, newshape=(-1, 1)), map(trace, loadAll(f)))
+        traces = map(op.itemgetter((slice(None), None)), map(trace, loadAll(f)))
         for states in map(model.predict, traces):
             dump(states.astype('uint8'), out_f)
