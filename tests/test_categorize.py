@@ -2,7 +2,6 @@ import numpy as np
 from blink_analysis.categorize import *
 
 import pytest
-
 from click.testing import CliRunner
 
 @pytest.fixture
