@@ -59,8 +59,9 @@ def jitter(probs, amplitude=0.1, rng=None):
 @click.option("--variance", type=float, default=0.0)
 @click.option("--nstates", type=(int, int), default=(1, 1))
 @click.option("--seed", type=int, default=None)
+@click.option("--mean-weight", type=float, default=0.0)
 def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0,
-          nstates=(1, 1), seed=None):
+          nstates=(1, 1), seed=None, mean_weight=0.0):
     rng = np.random.RandomState(seed)
 
     means = np.repeat([signal, bias], [nstates[0], nstates[1] + 1])[:, None]
@@ -72,7 +73,7 @@ def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0,
 
     model = hmm.GaussianHMM(
         n_components=len(trans), #transmat_prior=trans,
-        #means_prior=means, means_weight=1.0,
+        means_prior=means, means_weight=mean_weight,
         #covars_prior=covars, covars_weight=1.0,
         params='stmc', init_params='', algorithm='viterbi'
     )
