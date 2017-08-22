@@ -67,7 +67,6 @@ def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0,
     means = np.repeat([signal, bias], [nstates[0], nstates[1] + 1])[:, None]
     means = jitter(means, rng=rng)
     covars = np.repeat([variance, noise], [nstates[0], nstates[1] + 1])[:, None]
-    covars = jitter(covars, rng=rng)
     startprob = normalize(jitter(np.ones((1, sum(nstates) + 1)), rng=rng))[0]
     trans = normalize(jitter(gen_trans(nstates), rng=rng))
 
