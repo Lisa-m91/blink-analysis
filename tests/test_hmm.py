@@ -10,26 +10,26 @@ def runner():
     return CliRunner()
 
 def test_gen_trans_size():
-    expected = normalize(np.array([[1.0, 1.0, 0.1],
-                                   [1.0, 1.0, 0.0],
-                                   [0.0, 0.0, 1.0]]))
+    expected = np.array([[1.0, 1.0, 0.1],
+                         [1.0, 1.0, 0.0],
+                         [0.0, 0.0, 1.0]])
     np.testing.assert_equal(gen_trans([1, 1]), expected)
-    expected = normalize(np.array([[1.0, 1.0, 1.0, 1.0, 0.1],
-                                   [1.0, 1.0, 1.0, 1.0, 0.1],
-                                   [1.0, 1.0, 1.0, 1.0, 0.0],
-                                   [1.0, 1.0, 1.0, 1.0, 0.0],
-                                   [0.0, 0.0, 0.0, 0.0, 1.0]]))
+    expected = np.array([[1.0, 1.0, 1.0, 1.0, 0.1],
+                         [1.0, 1.0, 1.0, 1.0, 0.1],
+                         [1.0, 1.0, 1.0, 1.0, 0.0],
+                         [1.0, 1.0, 1.0, 1.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0, 1.0]])
     np.testing.assert_equal(gen_trans([2, 2]), expected)
-    expected = normalize(np.array([[1.0, 1.0, 1.0, 0.1],
-                                   [1.0, 1.0, 1.0, 0.1],
-                                   [1.0, 1.0, 1.0, 0.0],
-                                   [0.0, 0.0, 0.0, 1.0]]))
+    expected = np.array([[1.0, 1.0, 1.0, 0.1],
+                         [1.0, 1.0, 1.0, 0.1],
+                         [1.0, 1.0, 1.0, 0.0],
+                         [0.0, 0.0, 0.0, 1.0]])
     np.testing.assert_equal(gen_trans([2, 1]), expected)
 
 def test_gen_trans_bleachprob():
-    expected = normalize(np.array([[1.0, 1.0, 0.0],
-                                   [1.0, 1.0, 0.2],
-                                   [0.0, 0.0, 1.0]]))
+    expected = np.array([[1.0, 1.0, 0.0],
+                         [1.0, 1.0, 0.2],
+                         [0.0, 0.0, 1.0]])
     np.testing.assert_equal(gen_trans([1, 1], [0.0, 0.2]), expected)
 
 def untrace(values):

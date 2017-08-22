@@ -43,7 +43,12 @@ def gen_trans(nstates, bleach_prob=[0.1, 0.0]):
     trans = np.concatenate([trans, bleach_prob[:, None]], axis=1)
     stay_bleached = np.repeat([0.0, 1.0], [sum(nstates), 1])
     trans = np.concatenate([trans, stay_bleached[None, :]], axis=0)
-    return normalize(trans)
+    return trans
+
+def jitter(probs, amplitude=0.1, rng=None):
+    if not isinstance(rng, np.random.RandomState):
+        rng = np.random.RandomState(rng)
+    return probs * rng.uniform(1-amplitude, 1+amplitude, probs.shape)
 
 @main.command()
 @click.argument("signals", type=Path, nargs=-1)
@@ -53,11 +58,17 @@ def gen_trans(nstates, bleach_prob=[0.1, 0.0]):
 @click.option("--signal", type=float, default=1.0)
 @click.option("--variance", type=float, default=0.0)
 @click.option("--nstates", type=(int, int), default=(1, 1))
-def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0, nstates=(1, 1)):
-    means = np.array([signal, bias, bias])[:, None]
-    covars = np.array([variance, noise, noise])[:, None]
-    startprob = normalize(np.ones((1, sum(nstates) + 1)))[0]
-    trans = gen_trans(nstates)
+@click.option("--seed", type=int, default=None)
+def train(signals, output, bias=0.0, noise=0.0, signal=1.0, variance=0.0,
+          nstates=(1, 1), seed=None):
+    rng = np.random.RandomState(seed)
+
+    means = np.repeat([signal, bias], [nstates[0], nstates[1] + 1])[:, None]
+    means = jitter(means, rng=rng)
+    covars = np.repeat([variance, noise], [nstates[0], nstates[1] + 1])[:, None]
+    covars = jitter(covars, rng=rng)
+    startprob = normalize(jitter(np.ones((1, sum(nstates) + 1)), rng=rng))[0]
+    trans = normalize(jitter(gen_trans(nstates), rng=rng))
 
     model = hmm.GaussianHMM(
         n_components=len(trans), #transmat_prior=trans,
