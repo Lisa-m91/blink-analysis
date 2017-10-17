@@ -34,7 +34,6 @@ def sliceSeries(seriess, start=0, end=None):
 
 def extractAll(peaks, series, size=1, start=0, end=None):
     from numpy import empty, around, array
-    from tifffile.tifffile import TiffPageSeries
 
     dtype = series[0].dtype
     start, end, _ = slice(start, end).indices(sum(s.shape[0] for s in series))
@@ -62,11 +61,11 @@ def extractAll(peaks, series, size=1, start=0, end=None):
 @click.command("extract")
 @click.argument("peaks", type=Path)
 @click.argument("images", nargs=-1, type=SingleTiffFile)
+@click.argument("output", type=Path)
 @click.option("--size", type=int, default=2, help="The radius of the spot to extract")
 @click.option("--start", type=int, default=0, help="The first frame to extract")
 @click.option("--end", type=int, default=None, help="The last frame to extract")
-def main(peaks, images, size=2, start=0, end=None):
-    from sys import stdout
+def main(peaks, images, output, size=2, start=0, end=None):
     from itertools import chain
     from pickle import load, dump, HIGHEST_PROTOCOL
     dump = partial(dump, protocol=HIGHEST_PROTOCOL)
@@ -81,5 +80,6 @@ def main(peaks, images, size=2, start=0, end=None):
 
     rois = extractAll(peaks, list(series), size=size, start=start, end=end)
 
-    for roi in rois:
-        dump(roi, stdout.buffer)
+    with output.open("wb") as f:
+        for roi in rois:
+            dump(roi, f)
