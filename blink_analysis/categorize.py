@@ -84,14 +84,17 @@ default_colors = list(map("C{}".format, range(10)))
               help="The number of frames to plot")
 @click.option("-n", type=(int, int), default=(5, 1),
               help="The number of traces to plot (rows cols)")
+@click.option("--filter-state", type=int, multiple=True,
+              help="Filter out traces with no matching frames")
 @click.option("--color", type=str, default=default_colors, multiple=True,
               help="The colors to plot each state in")
 @click.option("--seed", type=int, default=None,
               help="The random seed for selecting traces")
 @click.pass_context
 def plot(ctx, length=None, output=None, figsize=(3, 10),
-         n=(5, 1), color=default_colors, seed=None):
-    ctx.obj = {'LENGTH': length, 'COLORS': np.asarray(color), 'N': reduce(op.mul, n),}
+         n=(5, 1), filter_state=False, color=default_colors, seed=None):
+    ctx.obj = {'LENGTH': length, 'COLORS': np.asarray(color), 'N': reduce(op.mul, n),
+               'FILTER': filter_state}
 
     if output is not None:
         import matplotlib
@@ -107,7 +110,7 @@ def plot(ctx, length=None, output=None, figsize=(3, 10),
 
 @plot.resultcallback()
 def save(fig, length=None, output=None, figsize=(3, 10),
-         n=(5, 1), color=default_colors, seed=None):
+         n=(5, 1), filter_state=False, color=default_colors, seed=None):
     import matplotlib.pyplot as plt
     fig.set_size_inches(*figsize)
     fig.tight_layout()
@@ -118,14 +121,18 @@ def save(fig, length=None, output=None, figsize=(3, 10),
     else:
         plt.show()
 
-def load_data(files, length):
+def load_data(files, length=None, filter_states=()):
     rois, categories = [], []
     getter = op.itemgetter(slice(None, length))
     for roi_f, category_f in zip(files[0::2], files[1::2]):
         with roi_f.open("rb") as roi_f, category_f.open("rb") as category_f:
             rois.extend(map(getter, loadAll(roi_f)))
             categories.extend(map(getter, loadAll(category_f)))
-    return np.asarray(rois), np.asarray(categories)
+    if filter_states:
+        keep = list(map(np.any, [[c == s for s in filter_states] for c in categories]))
+        return np.asarray(rois)[keep], np.asarray(categories)[keep]
+    else:
+        return np.asarray(rois), np.asarray(categories)
 
 @plot.command()
 @click.argument("files", type=Path, nargs=-1)
@@ -135,7 +142,7 @@ def load_data(files, length):
 def grid(ctx, files, ncols=80):
     import matplotlib.patches as patches
 
-    rois, categories = load_data(files, ctx.obj['LENGTH'])
+    rois, categories = load_data(files, ctx.obj['LENGTH'], ctx.obj['FILTER'])
     if not len(rois):
         return ctx.obj['FIG']
 
@@ -169,7 +176,7 @@ def grid(ctx, files, ncols=80):
 @click.argument("files", type=Path, nargs=-1)
 @click.pass_context
 def traces(ctx, files):
-    rois, categories = load_data(files, ctx.obj['LENGTH'])
+    rois, categories = load_data(files, ctx.obj['LENGTH'], ctx.obj['FILTER'])
     if not len(rois):
         return ctx.obj['FIG']
 

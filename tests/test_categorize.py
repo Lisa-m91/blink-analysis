@@ -72,6 +72,38 @@ def test_image_grid():
                          [10, 11,  0,  0]])
     np.testing.assert_equal(image_grid(data[:3], 2), expected)
 
+def test_load_data(tmpdir):
+    rng = np.random.RandomState(4)
+    # Test unequal lengths
+    rois = np.asarray(list(rng.normal(size=(3, 10, 4, 4))) +
+                      list(rng.normal(size=(2, 7, 4, 4))))
+    ons = np.asarray(list(map(np.asarray, [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 2, 0, 0],
+        [0, 0, 0, 0, 2, 2, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+    ])))
+
+    roi_f = tmpdir.join("rois.pickle")
+    with roi_f.open("wb") as f:
+        for roi in rois:
+            dump(roi, f)
+
+    on_f = tmpdir.join("ons.pickle")
+    with on_f.open("wb") as f:
+        for on in ons:
+            dump(on, f)
+
+    statess = [], [1], [1, 2]
+    idxss = slice(None), [1, 2], [1, 2, 3]
+    for states, idxs in zip(statess, idxss):
+        data = load_data([roi_f, on_f], filter_states=states)
+        for result, expected in zip(data[0], rois[idxs]):
+            np.testing.assert_equal(result, expected)
+        for result, expected in zip(data[1], ons[idxs]):
+            np.testing.assert_equal(result, expected)
+
 def test_plot_grid(runner, tmpdir):
     rois = np.random.randint(1, 200, size=(10, 20, 4, 4)).astype('uint8')
     roi_f = tmpdir.join("rois.pickle")
